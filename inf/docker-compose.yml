@@ -1,0 +1,36 @@
+version: "3"
+
+services:
+
+  node:
+    image: node
+    user: node
+    ports:
+      - "3003:3003"
+    expose:
+      - "3003"
+    working_dir: "/home/node/app"
+    volumes:
+      - "../:/home/node/app"
+    command: sh -c "npm run-script rollback && npm run-script migrate && npm run-script watch"
+    depends_on:
+      - db
+
+  db:
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=groupmail
+      - MYSQL_USER=node
+      - MYSQL_PASSWORD=node
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    volumes:
+      - ./sqldump/:/docker-entrypoint-initdb.d
+      - ./db-data:/var/lib/mysql
+    restart: always
+
+# vim: noai:ts=2:sw=2

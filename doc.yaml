@@ -1,0 +1,786 @@
+openapi: 3.0.1
+
+info:
+  title: groupmail
+  description: |
+    Uni project; shared mail for groups such as student groups or classes
+  contact:
+    name: Michał Czarnecki
+    email: czarnecky@va.pl
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  version: 1.0.0
+
+servers:
+- url: https://groupmail.swagger.io/v2
+- url: http://groupmail.swagger.io/v2
+
+tags:
+- name: groups
+  description: All about groups
+- name: mail
+  description: All about mail
+- name: posts
+  description: Posts and comments
+- name: users
+  description: Users
+
+paths:
+
+  '/groups':
+    get:
+      tags:
+        - groups
+      summary: 'Get groups user belongs to'
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'List of groups'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+        401:
+          description: 'Unauthorized'
+
+    post:
+      tags:
+        - groups
+      summary: 'Create group'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
+      responses:
+        201:
+          description: 'Group created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+        401:
+          description: 'Unauthorized'
+        409:
+          description: 'Name/email occupied'
+
+
+  '/groups/{groupId}/leave':
+    parameters:
+      - in: path
+        name: groupId
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+
+    post:
+      tags:
+        - groups
+      summary: 'Leave group'
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'Left group'
+        403:
+          description: 'Not in group'
+        404:
+          description: 'No such group'
+
+
+  '/groups/{groupId}/mail/{directory}':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: directory
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Directory'
+
+    get:
+      tags:
+        - mail
+      summary: 'Get mail list.'
+      security:
+        - JWT: []
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 0
+            minimum: 0
+            maximum: 1000
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 10
+            minimum: 5
+            maximum: 50
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'Mail list'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mail'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/directory'
+
+    post:
+      tags:
+        - mail
+      summary: 'Create mail. Only available in Drafts directory.'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mail'
+      responses:
+        200:
+          description: 'Full mail'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mail'
+        400:
+          description: 'Cannot create mail there'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/directory'
+
+
+  '/groups/{groupId}/mail/{directory}/messages/{mailId}':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: directory
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Directory'
+      - name: mailId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Mail/properties/id'
+
+    put:
+      tags:
+        - mail
+      summary: 'Edit mail draft.'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mail'
+      responses:
+        201:
+          description: 'Updated version'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mail'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot edit mail'
+        404:
+          description: 'No such group/directory/mail'
+
+    delete:
+      tags:
+        - mail
+      summary: 'Delete mail'
+      security:
+        - JWT: []
+      responses:
+        204:
+          description: 'Deleted'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot remove mail'
+        404:
+          description: 'No such group/directory/mail'
+
+
+  '/groups/{groupId}/mail/{directory}/messages/{mailId}/send':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: directory
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Directory'
+      - name: mailId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Mail/properties/id'
+
+    post:
+      tags:
+        - mail
+      summary: 'Send mail draft.'
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'Mail sent'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mail'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot send mail'
+        404:
+          description: 'No such group/directory/mail'
+
+
+  '/groups/{groupId}/mail/{directory}/messages/{mailId}/attachments':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: directory
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Directory'
+      - name: mailId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Mail/properties/id'
+
+    post:
+      tags:
+        - mail
+      summary: 'Add attachment'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: string
+              format: binary
+      responses:
+        201:
+          description: 'Added'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/directory/message'
+
+
+  '/groups/{groupId}/mail/{directory}/messages/{mailId}/attachments/{attachmentId}':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: directory
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: mailId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Mail/properties/id'
+      - name: attachmentId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/AttachmentMeta/properties/id'
+
+    get:
+      tags:
+        - mail
+      summary: 'Get attachment'
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'Attachment data'
+          content:
+            multipart/form-data:
+              schema:
+                type: string
+                format: binary
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/mail/attachment'
+
+    delete:
+      tags:
+        - mail
+      summary: 'Delete attachment'
+      security:
+        - JWT: []
+      responses:
+        204:
+          description: 'Removed attachment'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/mail/attachment'
+
+
+  '/groups/{groupId}/posts':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+
+    get:
+      tags:
+        - posts
+      summary: 'Get posts'
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 0
+            minimum: 0
+            maximum: 1000
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 10
+            minimum: 5
+            maximum: 50
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'List of posts'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group'
+
+    post:
+      tags:
+        - posts
+      summary: 'Add post'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Post'
+      responses:
+        201:
+          description: 'Added post'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot post'
+        404:
+          description: 'No such group'
+
+
+  '/groups/{groupId}/posts/{postId}/comments':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: postId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Post/properties/id'
+
+    get:
+      tags:
+        - posts
+      summary: 'Get list of comments under a post'
+      security:
+        - JWT: []
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 0
+            minimum: 0
+            maximum: 1000
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: 10
+            minimum: 5
+            maximum: 50
+      responses:
+        200:
+          description: 'List of comments'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group/post'
+
+    post:
+      tags:
+        - posts
+      summary: 'Add a comment'
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        201:
+          description: 'Added'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot comment'
+        404:
+          description: 'No such group/post'
+
+
+  '/groups/{groupId}/users':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+
+    get:
+      tags:
+        - users
+      summary: 'Get list of users in given group'
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: 'Ok'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User/properties/login'
+        401:
+          description: 'Unauthorized'
+        404:
+          description: 'No such group'
+
+    post:
+      tags:
+        - users
+      summary: 'Invite user to group'
+      security:
+        - JWT: []
+      parameters:
+        - name: email
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: 'Invitation sent'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot invite users'
+
+
+  '/groups/{groupId}/users/{userLogin}':
+    parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Group/properties/id'
+      - name: userLogin
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/User/properties/login'
+
+    delete:
+      tags:
+        - users
+      summary: 'Kick user from group (must be group admin)'
+      security:
+        - JWT: []
+      responses:
+        204:
+          description: 'Kicked'
+        401:
+          description: 'Unauthorized'
+        403:
+          description: 'Cannot kick users'
+        404:
+          description: 'No such group/user'
+        409:
+          description: 'Cannot kick user'
+
+
+  '/users/login':
+    post:
+      tags:
+        - users
+      summary: 'Login'
+      security:
+        - BasicAuth: []
+      responses:
+        200:
+          description: 'Authorized'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    readOnly: true
+                  userData:
+                    $ref: '#/components/schemas/User'
+        401:
+          description: 'Unauthorized'
+        409:
+          description: 'Name occupied'
+
+
+  '/users/register':
+    post:
+      tags:
+        - users
+      summary: 'Register'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+      responses:
+        201:
+          description: 'Registered'
+        401:
+          description: 'Unauthorized'
+        409:
+          description: 'Name occupied'
+
+
+components:
+  schemas:
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        author:
+          type: integer
+          format: int64
+          readOnly: true
+        body:
+          type: string
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+
+    Comment:
+      type: object
+      properties:
+        parentid:
+          type: integer
+          format: int64
+          readOnly: true
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        author:
+          type: integer
+          format: int64
+          readOnly: true
+        body:
+          type: string
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        creator:
+          type: string
+          readOnly: true
+        name:
+          type: string
+        email:
+          type: string
+        description:
+          type: string
+        createdDate:
+          type: string
+          format: date-time
+          readOnly: true
+
+    User:
+      type: object
+      properties:
+        login:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          readOnly: true
+
+    Mail:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          readOnly: true
+        title:
+          type: string
+        recipients:
+          type: array
+          items:
+            type: string
+        body:
+          type: string
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+        attachments:
+          readOnly: true
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentMeta'
+
+    AttachmentMeta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        size:
+          type: integer
+          format: int64
+        name:
+          type: string
+
+    Directory:
+      type: string
+      enum: [Inbox, Sent, Drafts, Spam, Trash]
+      default: Inbox
+
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+    JWT:
+      type: apiKey
+      name: Authorization
+      in: header
+
+# vim: noai:ts=2:sw=2
