@@ -8,8 +8,7 @@ const sign = (user) => {
 
     return jwt.sign({
         id: user.id
-        // Inne pola ktore maja zostac dodane do tokenu, np. rola
-    }, process.env.JWT_SECRET, options)
+    }, process.env.JWT_SECRET, options);
 };
 
 module.exports = { sign };
