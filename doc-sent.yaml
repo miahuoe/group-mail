@@ -624,6 +624,8 @@ paths:
                     $ref: '#/components/schemas/User'
         401:
           description: 'Unauthorized'
+        409:
+          description: 'Name occupied'
 
 
   '/users/register':
