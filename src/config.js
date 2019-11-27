@@ -18,7 +18,7 @@ const config = {
 		expiration: "3d"
 	},
 	bcrypt: {
-
+		rounds: 10
 	}
 };
 

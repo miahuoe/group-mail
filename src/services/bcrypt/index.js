@@ -1,5 +1,12 @@
-const { bcrypt } = require("../../config");
+const bcrypt = require("bcrypt");
+const config = require("../../config");
 
-module.exports = { }
+const passwordHash = (password) => {
+	return bcrypt.hashSync(password, config.bcrypt.rounds);
+};
+
+module.exports = {
+	passwordHash
+};
 
 // vim:noai:ts=4:sw=4

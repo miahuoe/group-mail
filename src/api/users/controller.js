@@ -1,24 +1,51 @@
+const { passwordHash } = require('../../services/bcrypt');
 const User = require('./model');
 
-const register = async ({query, params}, res, next) => {
-	console.log(query, params)
-	try {
-		// TODO does not work?
-		const result = await User.query().insert({
-			login: query.login,
-			email: query.email,
-			password: query.password
-		});
-		res.send(result).status(200);
-	} catch (e) {
-		res.send(e).status(403); // ??
-	} finally {
-		res.end();
+const register = async (req, res, next) => {
+	/* TODO
+	 * Maybe register should be similar to login? BasicAuth?
+	 */
+	if (req.body.login == undefined
+		|| req.body.email === undefined
+		|| req.body.password === undefined) {
+		res.status(400).end();
+		return;
 	}
+	const hashedPassword = passwordHash(req.body.password);
+	User.query().insert({
+		login: req.body.login,
+		email: req.body.email,
+		password: hashedPassword
+	}).then((result) => {
+		res.status(201).json({
+			message: "Registered"
+		}).end();
+	}).catch((err) => {
+		if (err.code == "ER_DUP_ENTRY") {
+			res.status(409).json({
+				error: err,
+				message: "Such user exists"
+			}).end();
+		} else {
+			res.status(500).json({ // TODO 5xx
+				message: "Other error :(",
+				// TODO When does it fail exactly?
+				error: err
+			}).end();
+		}
+	});
 }
 
-const login = ({query, params}, res, next) => {
-	res.send("login");
+const login = (req /*{query, params}*/, res, next) => {
+	const b64auth = (req.headers.authorization || "").split(" ")[1] || "";
+	const [login, password] = new Buffer(b64auth, "base64").toString().split(":");
+	if (login === undefined || password === undefined) {
+		res.status(400).json({
+			message: "gib auth", // TODO
+		}).end();
+		return;
+	}
+	res.json({login, password}).end();
 }
 
 module.exports = {
