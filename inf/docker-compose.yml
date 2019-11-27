@@ -3,7 +3,8 @@ version: "3"
 services:
 
   node:
-    image: node
+    build: ./node
+    #image: node:10-buster
     user: node
     ports:
       - "3003:3003"
@@ -12,7 +13,12 @@ services:
     working_dir: "/home/node/app"
     volumes:
       - "../:/home/node/app"
-    command: sh -c "npm run-script rollback && npm run-script migrate && npm run-script watch"
+    command: >
+      sh -c "
+      nc -z db 3306 &&
+      npm run-script rollback &&
+      npm run-script migrate &&
+      npm run-script watch"
     depends_on:
       - db
 
