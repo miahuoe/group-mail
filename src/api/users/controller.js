@@ -10,7 +10,7 @@ const register = (req, res, next) => {
 	if (req.body.login == undefined
 		|| req.body.email === undefined
 		|| req.body.password === undefined) {
-		res.status(400).end();
+		res.sendStatus(400)();
 		return;
 	} // TODO
 	const hashedPassword = passwordHash(req.body.password);
@@ -21,19 +21,19 @@ const register = (req, res, next) => {
 	}).then((result) => {
 		res.status(201).json({
 			message: "Registered"
-		}).end();
+		});
 	}).catch((err) => {
 		if (err.code == "ER_DUP_ENTRY") {
 			res.status(409).json({
 				error: err,
 				message: "Such user exists"
-			}).end();
+			});
 		} else {
 			res.status(500).json({ // TODO 5xx
 				message: "Other error :(",
 				// TODO When does it fail exactly?
 				error: err
-			}).end();
+			});
 		}
 	});
 };
@@ -47,7 +47,7 @@ const login = (req /*{query, params}*/, res, next) => {
 			email: req.user.email,
 			joined: req.user.joined,
 		}
-	}).end();
+	});
 };
 
 module.exports = {
