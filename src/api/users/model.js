@@ -1,3 +1,4 @@
+const bcrypt = require("bcrypt");
 const { Model } = require("objection");
 const knex = require("../../services/knex");
 
@@ -25,6 +26,12 @@ class User extends Model {
 			}
 		}
 	}
+
+	authenticate(password) {
+		return bcrypt.compare(password, this.password)
+			.then((valid) => valid ? this : false);
+	}
+
 
 	$beforeInsert() {
 		// set date

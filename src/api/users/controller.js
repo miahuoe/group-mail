@@ -1,7 +1,9 @@
-const { passwordHash } = require('../../services/bcrypt');
-const User = require('./model');
+const bcrypt = require("bcrypt");
+const { sign } = require("../../services/jwt");
+const { passwordHash } = require("../../services/bcrypt");
+const User = require("./model");
 
-const register = async (req, res, next) => {
+const register = (req, res, next) => {
 	/* TODO
 	 * Maybe register should be similar to login? BasicAuth?
 	 */
@@ -10,7 +12,7 @@ const register = async (req, res, next) => {
 		|| req.body.password === undefined) {
 		res.status(400).end();
 		return;
-	}
+	} // TODO
 	const hashedPassword = passwordHash(req.body.password);
 	User.query().insert({
 		login: req.body.login,
@@ -34,19 +36,19 @@ const register = async (req, res, next) => {
 			}).end();
 		}
 	});
-}
+};
 
 const login = (req /*{query, params}*/, res, next) => {
-	const b64auth = (req.headers.authorization || "").split(" ")[1] || "";
-	const [login, password] = new Buffer(b64auth, "base64").toString().split(":");
-	if (login === undefined || password === undefined) {
-		res.status(400).json({
-			message: "gib auth", // TODO
-		}).end();
-		return;
-	}
-	res.json({login, password}).end();
-}
+	const token = sign(req.user);
+	res.status(200).json({
+		token,
+		userData: {
+			login: req.user.login,
+			email: req.user.email,
+			joined: req.user.joined,
+		}
+	}).end();
+};
 
 module.exports = {
 	register, login
