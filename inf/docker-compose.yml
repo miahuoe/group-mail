@@ -15,7 +15,11 @@ services:
       - "../:/home/node/app"
     command: >
       sh -c "
-      nc -z db 3306 &&
+      while ! nc -z db 3306;
+      do
+        echo 'waiting for db 3306';
+        sleep 2;
+      done &&
       npm run-script rollback &&
       npm run-script migrate &&
       npm run-script watch"
