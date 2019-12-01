@@ -1,16 +1,22 @@
-const Group = require('./model');
+const Group = require("./model");
+const User = require("../users/model");
+const { transaction } = require('objection');
 
-const create = (req, res, next) => {
-	Group.query().insert({
+const create = async (req, res, next) => {
+	const newGroup = {
 		adminId: req.user.id,
 		emailLocal: req.body.emailLocal,
 		name: req.body.name,
 		description: req.body.description
-	}).then((result) => {
-		delete result.adminId;
-		// TODO membership
-		res.status(201).json(result);
-	}).catch((err) => {
+	};
+
+	try {
+		// TODO transaction?
+		const g = await Group.query().insert(newGroup);
+		const r = await g.$relatedQuery("users").relate(req.user.id);
+		delete g.adminId;
+		res.status(201).json(g);
+	} catch (err) {
 		if (err.code == "ER_DUP_ENTRY") {
 			let message = ""
 			if (err.sqlMessage.indexOf("mail_groups_emaillocal") != -1) {
@@ -31,11 +37,22 @@ const create = (req, res, next) => {
 				error: err
 			});
 		}
-	});
+	}
 }
 
-const getUsersGroups = (req, res, next) => {
-
+const getUsersGroups = async (req, res, next) => {
+	try {
+		const u = await User.query().findById(req.user.id);
+		const groups = await u.$relatedQuery("groups");
+		for (g of groups) {
+			delete g.adminId;
+		}
+		res.status(200).json(groups);
+	} catch (err) {
+		res.status(404).json({
+			message: err
+		});
+	}
 }
 
 const invite = (req, res, next) => {

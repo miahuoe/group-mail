@@ -30,6 +30,24 @@ class Group extends Model {
 		}
 	}
 
+	static get relationMappings() {
+		const User = require("../users/model");
+		return {
+			users: {
+				relation: Model.ManyToManyRelation,
+				modelClass: User,
+				join: {
+					from: "mail_groups.id",
+					through: {
+						from: "membership.groupId",
+						to: "membership.userId"
+					},
+					to: "users.id"
+				}
+			}
+		}
+	};
+
 	$beforeInsert() {
 		// set date
 	}
