@@ -3,7 +3,7 @@ const config = require("../config");
 
 const authToken = (req, res, next) => {
 	try {
-		const token = req.headers.authorisation.split(" ")[1];
+		const token = req.headers.authorization.split(" ")[1];
 		const decoded = jwt.verify(token, process.env.JWT_SECRET, {
 			maxAge: config.jwt.expiration
 		});
