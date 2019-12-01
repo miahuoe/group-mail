@@ -1,10 +1,13 @@
 const { Router } = require("express")
-const { index, byId } = require("./controller")
 const router = Router()
+const { create, getUsersGroups, invite } = require("./controller")
+const token = require("../../middlewares/token")
 
-router.get('/', index);
+router.get('/', token, getUsersGroups);
 
-router.get('/:id', byId);
+router.post('/', token, create);
+
+router.get('/:id/invite', token, invite);
 
 module.exports = router;
 

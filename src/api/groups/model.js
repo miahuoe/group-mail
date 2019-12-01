@@ -1,15 +1,40 @@
+const bcrypt = require("bcrypt");
+const { Model } = require("objection");
+const knex = require("../../services/knex");
 
-class GroupsModel {
+Model.knex(knex);
 
-	getAll() {
-		return "all groups"
+class Group extends Model {
+
+	static get tableName() {
+		return "mail_groups";
 	}
 
-	getById(id) {
-		return `id = ${id}`
+	static get idColumn() {
+		return "id";
+	}
+
+	static get jsonSchema() {
+		return {
+			type: "object",
+			required: ["adminId", "emailLocal", "name", "description"],
+			properties: {
+				id: {type: "integer", readOnly: true},
+				adminId: {type: "integer", readOnly: true},
+				emailLocal: {type: "string"},
+				//emailPassword: {type: "string"},
+				name: {type: "string"},
+				description: {type: "string"},
+				created: {type: "string", format: "date-time"}
+			}
+		}
+	}
+
+	$beforeInsert() {
+		// set date
 	}
 }
 
-module.exports = GroupsModel;
+module.exports = Group;
 
 // vim:noai:ts=4:sw=4
