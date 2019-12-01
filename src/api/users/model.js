@@ -5,6 +5,7 @@ const knex = require("../../services/knex");
 Model.knex(knex);
 
 class User extends Model {
+
 	static get tableName() {
 		return "users";
 	}
@@ -36,6 +37,24 @@ class User extends Model {
 	$beforeInsert() {
 		// set date
 	}
+
+	static get relationMappings() {
+		const Group = require("../groups/model");
+		return {
+			groups: {
+				relation: Model.ManyToManyRelation,
+				modelClass: Group,
+				join: {
+					from: "users.id",
+					through: {
+						from: "membership.userId",
+						to: "membership.groupId"
+					},
+					to: "mail_groups.id"
+				}
+			}
+		}
+	};
 }
 
 module.exports = User;
