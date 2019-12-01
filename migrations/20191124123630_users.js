@@ -1,7 +1,7 @@
 
 const tableName = "users";
 
-exports.up = function(knex, Promise) {
+exports.up = function(knex) {
 	return knex.schema.createTable(tableName, function (table) {
 		table.increments("id").primary();
 		table.string("login").notNull();
