@@ -25,7 +25,7 @@ const register = (req, res, next) => {
 	}).catch((err) => {
 		if (err.code == "ER_DUP_ENTRY") {
 			res.status(409).json({
-				error: err,
+				//error: err,
 				message: "Such user exists"
 			});
 		} else {
