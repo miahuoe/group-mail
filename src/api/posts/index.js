@@ -3,9 +3,9 @@ const router = Router()
 const { addPost, getPosts } = require("./controller")
 const token = require("../../middlewares/token")
 
-router.get('/', token, getPosts);
+router.get("/", token, getPosts);
 
-router.post('/', token, addPost);
+router.post("/", token, addPost);
 
 module.exports = router;
 

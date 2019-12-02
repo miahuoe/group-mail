@@ -1,9 +1,22 @@
 const Post = require("./model");
 
-const addPost = (req, res, next) => {
+const addPost = async (req, res, next) => {
 	// offset 0-1000,0
 	// limit 5-50,10
-	req.status(200).json({post: "post"});
+	console.log(req); // TODO {}
+	const newPost = {
+		groupId: req.groupId,
+		authorId: req.user.id,
+		body: req.body.body,
+	};
+	try {
+		const p = await Post.query().insert(newPost);
+		// TODO missing creation date
+		delete p.groupId;
+		res.status(200).json(p);
+	} catch (e) {
+		res.status(400).json(e);
+	}
 }
 
 const getPosts = (req, res, next) => {

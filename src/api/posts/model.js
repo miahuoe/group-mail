@@ -16,15 +16,18 @@ class Post extends Model {
 	static get jsonSchema() {
 		return {
 			type: "object",
-			required: ["author", "body"],
+			required: ["groupId", "authorId", "body"],
 			properties: {
 				id: {type: "integer", readOnly: true},
-				author: {type: "integer", readOnly: true},
+				groupId: {type: "integer", readOnly: true},
+				authorId: {type: "integer", readOnly: true},
 				body: {type: "string"},
-				date: {type: "string", format: "date-time"}
+				created: {type: "string", format: "date-time"}
 			}
 		}
 	}
+
+	// TODO has one: author
 
 	$beforeInsert() {
 		// set date
