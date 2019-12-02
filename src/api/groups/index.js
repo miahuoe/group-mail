@@ -1,13 +1,20 @@
 const { Router } = require("express")
 const router = Router()
 const { create, getUsersGroups, invite } = require("./controller")
+const posts = require("../posts")
 const token = require("../../middlewares/token")
 
-router.get('/', token, getUsersGroups);
+router.get("/", token, getUsersGroups);
 
-router.post('/', token, create);
+router.post("/", token, create);
 
-router.get('/:id/invite', token, invite);
+//router.get("/:userId/invite", token, invite);
+
+// TODO maybe https://expressjs.com/en/4x/api.html#express.router
+router.use("/:groupId/posts", (req, res, next) => {
+	req.groupId = parseInt(req.params.groupId); // TODO
+	next();
+}, posts);
 
 module.exports = router;
 
