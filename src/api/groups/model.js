@@ -32,6 +32,7 @@ class Group extends Model {
 
 	static get relationMappings() {
 		const User = require("../users/model");
+		const Post = require("../posts/model");
 		return {
 			users: {
 				relation: Model.ManyToManyRelation,
@@ -43,6 +44,14 @@ class Group extends Model {
 						to: "membership.userId"
 					},
 					to: "users.id"
+				}
+			},
+			posts: {
+				relation: Model.HasManyRelation,
+				modelClass: Post,
+				join: {
+					from: "mail_groups.id",
+					to: "posts.groupId"
 				}
 			}
 		}
