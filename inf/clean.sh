@@ -1,4 +1,4 @@
 #!/bin/sh
-
-sudo chown xelf:xelf -R db-data
+u=$USER
+sudo chown $u:$u -R db-data
 rm -rf db-data/*
