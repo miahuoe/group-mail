@@ -33,7 +33,7 @@ const getPosts = async (req, res, next) => {
 	try {
 		const g = await Group.query().findById(req.groupId);
 		const p = await g.$relatedQuery("posts")
-			.orderBy("created")
+			.orderBy("created", "desc")
 			.limit(v.value.limit)
 			.offset(v.value.offset);
 		res.status(200).json(p);

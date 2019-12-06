@@ -32,7 +32,7 @@ const getComments = async (req, res, next) => {
 		const g = await Group.query().findById(req.groupId);
 		const p = await g.$relatedQuery("posts").findById(req.postId);
 		const c = await p.$relatedQuery("comments")
-			.orderBy("created")
+			.orderBy("created", "desc")
 			.limit(v.value.limit)
 			.offset(v.value.offset);
 		res.status(200).json(c);
