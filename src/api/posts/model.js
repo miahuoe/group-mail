@@ -27,6 +27,20 @@ class Post extends Model {
 		}
 	}
 
+	static get relationMappings() {
+		const Comment = require("../comments/model");
+		return {
+			comments: {
+				relation: Model.HasManyRelation,
+				modelClass: Comment,
+				join: {
+					from: "posts.id",
+					to: "comments.postId"
+				}
+			}
+		}
+	};
+
 	// TODO has one: author
 
 	$beforeInsert() {
