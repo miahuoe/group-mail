@@ -143,7 +143,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Mail'
+                type: array
+                item:
+                  $ref: '#/components/schemas/Mail'
         401:
           description: 'Unauthorized'
         404:
