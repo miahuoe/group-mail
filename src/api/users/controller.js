@@ -5,16 +5,14 @@ const User = require("./model");
 const Joi = require("joi");
 
 const register = (req, res, next) => {
-	/* TODO
-	 * Maybe register should be similar to login? BasicAuth?
-	 */
+	/* TODO Maybe register should be similar to login? BasicAuth? */
 	const schema = Joi.object({
 		login: Joi.string().alphanum()
 			.min(limits.login.minLength)
 			.max(limits.login.maxLength).required(),
 		email: Joi.string().email({
 			minDomainSegments: 2, // something.com
-			tlds: { allow: ["com", "net", "pl", "edu"] } // TODO add more
+			tlds: { allow: ["com", "net", "pl", "edu"] }
 		}).required(),
 		password: Joi.string()
 			.min(limits.password.minLength)
@@ -27,7 +25,6 @@ const register = (req, res, next) => {
 		});
 		return;
 	}
-
 	const hashedPassword = passwordHash(v.value.password);
 	User.query().insert({
 		login: v.value.login,
@@ -38,16 +35,18 @@ const register = (req, res, next) => {
 			message: "Registered"
 		});
 	}).catch((err) => {
-		if (err.code == "ER_DUP_ENTRY") { // TODO which duplicate?
-			res.status(409).json({
-				//error: err,
-				message: "Such user exists"
-			});
+		if (err.code == "ER_DUP_ENTRY") {
+			let message = ""
+			if (err.sqlMessage.indexOf("login") != -1) {
+				message = "Login occupied"
+			} else if (err.sqlMessage.indexOf("email") != -1) {
+				message = "Email already used"
+			}
+			res.status(409).json({message});
 		} else {
-			res.status(500).json({ // TODO 5xx
+			console.error(err);
+			res.status(500).json({
 				message: "Other error :(",
-				// TODO When does it fail exactly?
-				error: err
 			});
 		}
 	});
