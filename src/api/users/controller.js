@@ -1,5 +1,6 @@
 const { sign } = require("../../services/jwt");
 const { passwordHash } = require("../../services/bcrypt");
+const { limits } = require("../../config");
 const User = require("./model");
 const Joi = require("joi");
 
@@ -8,12 +9,16 @@ const register = (req, res, next) => {
 	 * Maybe register should be similar to login? BasicAuth?
 	 */
 	const schema = Joi.object({
-		login: Joi.string().alphanum().min(4).max(20).required(),
+		login: Joi.string().alphanum()
+			.min(limits.login.minLength)
+			.max(limits.login.maxLength).required(),
 		email: Joi.string().email({
 			minDomainSegments: 2, // something.com
-			tlds: { allow: ["com", "net", "pl", "edu"] }
+			tlds: { allow: ["com", "net", "pl", "edu"] } // TODO add more
 		}).required(),
-		password: Joi.string().min(8).max(30).required(),
+		password: Joi.string()
+			.min(limits.password.minLength)
+			.max(limits.password.maxLength).required(),
 	});
 	const v = schema.validate(req.body);
 	if (v.error) {

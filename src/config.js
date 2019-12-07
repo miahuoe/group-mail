@@ -30,6 +30,16 @@ const config = {
 		tlsOptions: {
 			servername: "imap.gmail.com"
 		},
+	},
+	limits: {
+		login: {
+			minLength: 4,
+			maxLength: 20
+		},
+		password: {
+			minLength: 8,
+			maxLength: 30
+		}
 	}
 };
 

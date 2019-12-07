@@ -22,7 +22,7 @@ class User extends Model {
 				id: {type: "integer", readOnly: true},
 				login: {type: "string"},
 				email: {type: "string"},
-				password: {type: "string"},
+				password: {type: "string"}, // NOTE Joi validates email
 				joined: {type: "string", format: "date-time"}
 			}
 		}
@@ -31,11 +31,6 @@ class User extends Model {
 	authenticate(password) {
 		return bcrypt.compare(password, this.password)
 			.then((valid) => valid ? this : false);
-	}
-
-
-	$beforeInsert() {
-		// set date
 	}
 
 	static get relationMappings() {
@@ -59,4 +54,4 @@ class User extends Model {
 
 module.exports = User;
 
-// vim:noai:ts=4:sw=4
+// vim: noai:ts=4:sw=4
