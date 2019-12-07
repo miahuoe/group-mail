@@ -1,29 +1,39 @@
-const bcrypt = require("bcrypt");
 const { sign } = require("../../services/jwt");
 const { passwordHash } = require("../../services/bcrypt");
 const User = require("./model");
+const Joi = require("joi");
 
 const register = (req, res, next) => {
 	/* TODO
 	 * Maybe register should be similar to login? BasicAuth?
 	 */
-	if (req.body.login == undefined
-		|| req.body.email === undefined
-		|| req.body.password === undefined) {
-		res.sendStatus(400)();
+	const schema = Joi.object({
+		login: Joi.string().alphanum().min(4).max(20).required(),
+		email: Joi.string().email({
+			minDomainSegments: 2, // something.com
+			tlds: { allow: ["com", "net", "pl", "edu"] }
+		}).required(),
+		password: Joi.string().min(8).max(30).required(),
+	});
+	const v = schema.validate(req.body);
+	if (v.error) {
+		res.status(400).json({
+			error: v.error
+		});
 		return;
-	} // TODO
-	const hashedPassword = passwordHash(req.body.password);
+	}
+
+	const hashedPassword = passwordHash(v.value.password);
 	User.query().insert({
-		login: req.body.login,
-		email: req.body.email,
+		login: v.value.login,
+		email: v.value.email,
 		password: hashedPassword
 	}).then((result) => {
 		res.status(201).json({
 			message: "Registered"
 		});
 	}).catch((err) => {
-		if (err.code == "ER_DUP_ENTRY") {
+		if (err.code == "ER_DUP_ENTRY") { // TODO which duplicate?
 			res.status(409).json({
 				//error: err,
 				message: "Such user exists"
@@ -38,7 +48,7 @@ const register = (req, res, next) => {
 	});
 };
 
-const login = (req /*{query, params}*/, res, next) => {
+const login = (req, res, next) => {
 	const token = sign(req.user);
 	res.status(200).json({
 		token,
