@@ -1,10 +1,8 @@
 const Comment = require("../comments/model");
-const Post = require("./model");
 const Group = require("../groups/model");
 const Joi = require("joi");
 
 const addComment = async (req, res, next) => {
-	//console.log(req); // TODO {}
 	const newComment = {
 		postId: req.postId,
 		authorId: req.user.id,
@@ -24,10 +22,11 @@ const getComments = async (req, res, next) => {
 		offset: Joi.number().integer().min(0).max(1000).default(0),
 		limit: Joi.number().integer().min(5).max(50).default(10),
 	});
-	const v = schema.validate({
-		limit: req.query.limit,
-		offset: req.query.offset,
-	});
+	const v = schema.validate(req.query);
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
 	try {
 		const g = await Group.query().findById(req.groupId);
 		const p = await g.$relatedQuery("posts").findById(req.postId);
