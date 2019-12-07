@@ -1,5 +1,6 @@
 const { Model } = require("objection");
 const knex = require("../../services/knex");
+const User = require("../users/model");
 
 Model.knex(knex);
 
@@ -37,15 +38,17 @@ class Post extends Model {
 					from: "posts.id",
 					to: "comments.postId"
 				}
+			},
+			author: {
+				relation: Model.HasOneRelation,
+				modelClass: User,
+				join: {
+					from: "posts.authorId",
+					to: "users.id"
+				}
 			}
 		}
 	};
-
-	// TODO has one: author
-
-	$beforeInsert() {
-		// set date
-	}
 }
 
 module.exports = Post;
