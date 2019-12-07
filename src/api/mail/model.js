@@ -1,4 +1,4 @@
-const { imap, connect, inspect } = require("../../services/imap");
+const { imap, connect } = require("../../services/imap");
 
 const parseMailStruct = (struct, attachments) => {
 	attachments = attachments || [];
