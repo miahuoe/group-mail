@@ -5,12 +5,14 @@ exports.up = function(knex) {
 	return knex.schema.createTable(tableName, function (table) {
 		table.increments("id").primary();
 		table.integer("adminId").unsigned().references("users.id").notNull();
-		table.string("emailLocal").notNull();
 		table.string("name").notNull();
 		table.string("description").notNull();
 		table.datetime("created").notNull().defaultTo(knex.fn.now());
 
-		table.unique(["emailLocal"]);
+		table.string("maillocal").notNull();
+		table.string("mailpass").notNull();
+
+		table.unique(["maillocal"]);
 		table.unique(["name"]);
 	});
 };

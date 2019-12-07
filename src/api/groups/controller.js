@@ -5,7 +5,8 @@ const { transaction } = require('objection');
 const create = async (req, res, next) => {
 	const newGroup = {
 		adminId: req.user.id,
-		emailLocal: req.body.emailLocal,
+		maillocal: req.body.maillocal,
+		mailpass: Math.random().toString(36).substring(2, 15), // TODO
 		name: req.body.name,
 		description: req.body.description
 	};
@@ -15,6 +16,7 @@ const create = async (req, res, next) => {
 		const g = await Group.query().insert(newGroup);
 		const r = await g.$relatedQuery("users").relate(req.user.id);
 		delete g.adminId;
+		delete g.mailpass;
 		res.status(201).json(g);
 	} catch (err) {
 		if (err.code == "ER_DUP_ENTRY") {
