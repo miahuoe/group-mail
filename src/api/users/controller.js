@@ -20,9 +20,7 @@ const register = (req, res, next) => {
 	});
 	const v = schema.validate(req.body);
 	if (v.error) {
-		res.status(400).json({
-			error: v.error
-		});
+		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
 	const hashedPassword = passwordHash(v.value.password);
@@ -42,11 +40,11 @@ const register = (req, res, next) => {
 			} else if (err.sqlMessage.indexOf("email") != -1) {
 				message = "Email already used"
 			}
-			res.status(409).json({message});
+			res.status(409).json({error: message});
 		} else {
 			console.error(err);
 			res.status(500).json({
-				message: "Other error :(",
+				error: "Other error :(",
 			});
 		}
 	});
