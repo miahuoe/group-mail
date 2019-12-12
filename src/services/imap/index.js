@@ -2,9 +2,12 @@ const { imapConnection } = require("../../config");
 const imap = require("imap");
 
 const connect = (user, password) => {
-	imapConnection.user = user;
-	imapConnection.password = password;
-	return new imap(imapConnection);
+	return new Promise((resolve, reject) => {
+		imapConnection.user = user;
+		imapConnection.password = password;
+		const connection = imap(imapConnection);
+		resolve(connection);
+	});
 };
 
 module.exports = { imap, connect };
