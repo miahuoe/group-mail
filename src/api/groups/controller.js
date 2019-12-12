@@ -15,7 +15,7 @@ const create = async (req, res, next) => {
 	});
 	const v = schema.validate(req.body);
 	if (v.error) {
-		res.status(400).json({error: v.error});
+		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
 	const newGroup = {
