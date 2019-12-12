@@ -1,78 +1,151 @@
+const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
 
-const parseMailStruct = (struct, attachments) => {
-	attachments = attachments || [];
+const parseMailStruct = (struct, parts) => {
+	parts = parts || [];
 	for (s of struct) {
 		if (Array.isArray(s)) {
-			parseMailStruct(s, attachments);
+			parseMailStruct(s, parts);
 		} else {
-			if (s.disposition && ["INLINE", "ATTACHMENT"].includes(s.disposition.type)) {
-				attachments.push({
-					id: parseInt(s.partID),
-					name: s.params.name,
-					size: s.size,
-				});
+			if (s.partID) {
+			//if (s.disposition && ["INLINE", "ATTACHMENT"].includes(s.disposition.type)) {
+				parts.push(s);
 			}
 		}
 	}
-	return attachments;
+	return parts;
 };
 
-const getMailFromDirectory = (i, directory, sequence) => {
+const attachmentsFromParts = (parts) => {
+	let att = [];
+	for (p of parts) {
+		if (p.disposition && ["INLINE", "ATTACHMENT"].includes(p.disposition.type)) {
+			att.push({
+				id: p.partID,
+				name: p.params.name,
+				size: p.size
+			});
+		}
+	}
+	return att;
+};
+
+const onceReady = (connection) => {
 	return new Promise((resolve, reject) => {
-		let mail = []
-		i.once("ready", () => {
-			i.openBox(directory, true, (err, box) => {
-				// TODO check presistent UID
-				if (err) reject(err);
-				//console.log(box);
-				let f = i.fetch(sequence(box.messages.total, box.uidnext), {
-					bodies: ["HEADER.FIELDS (FROM TO SUBJECT DATE)", "TEXT"],
-					// TODO fetch header first, then parse body for attachments
-					struct: true
+		connection.once("ready", () => {
+			resolve(connection);
+		});
+		connection.once("error", reject);
+		connection.once("end", () => {
+			console.log("IMAP end");
+		});
+		connection.connect();
+	});
+};
+
+const openBox = (connection, directory) => {
+	return new Promise((resolve, reject) => {
+		connection.openBox(directory, true, (err, box) => {
+			if (err) {
+				reject(err);
+				connection.end();
+			} else {
+				resolve(connection, box);
+			}
+		});
+	});
+};
+
+const fetchMeta = (conn, which) => {
+	return new Promise((resolve, reject) => {
+		let meta = [];
+		let header, attrs;
+		let f = conn.fetch(which, {
+			bodies: ["HEADER.FIELDS (FROM TO SUBJECT DATE)"],
+			struct: true
+		});
+		f.on("message", (msg, seqno) => {
+			msg.on("body", (stream, info) => {
+				let buffer = "";
+				stream.on("data", (chunk) => {
+					buffer += chunk.toString("utf8");
 				});
-				let body, header, uid, date, struct;
-				f.on("message", (msg, seqno) => {
-					msg.on("body", (stream, info) => {
-						let buffer = "";
-						stream.on("data", (chunk) => {
-						  buffer += chunk.toString("utf8");
-						});
-						stream.once("end", () => {
-							switch (info.which) {
-							case "TEXT":
-								body = buffer;
-								break;
-							default:
-								header = imap.parseHeader(buffer);
-								break;
-							}
-						});
-					});
-					msg.once("attributes", (attrs) => {
-						uid = attrs.uid;
-						date = attrs.date;
-						struct = attrs.struct;
-					});
-					msg.once("end", () => {
-						mail.push({
-							id: uid,
-							body: body,
-							date: date,
-							from: header.from,
-							to: header.to,
-							subject: header.subject[0],
-							attachments: parseMailStruct(struct),
-						});
-					});
+				stream.once("end", () => {
+					header = imap.parseHeader(buffer);
 				});
-				f.once("error", reject);
-				f.once("end", () => i.end());
+			});
+			msg.once("attributes", (a) => {
+				attrs = a;
+			});
+			msg.once("end", () => {
+				meta.push({
+					header: header,
+					attrs: attrs
+				});
 			});
 		});
-		i.once("error", reject);
-		i.once("end", () => resolve(mail));
-		i.connect();
+		f.once("error", (err) => {
+			reject(err);
+			conn.end();
+		});
+		f.once("end", () => {
+			resolve(meta);
+		});
+	});
+};
+
+const fetchPart = (conn, uid, partID) => {
+	return new Promise((resolve, reject) => {
+		let data = "";
+		let f = conn.fetch(uid, {
+			bodies: [partID],
+			struct: true
+		});
+		f.on("message", (msg, seqno) => {
+			msg.on("body", (stream, info) => {
+				let buffer = "";
+				stream.on("data", (chunk) => {
+					buffer += chunk.toString("utf8");
+				});
+				stream.once("end", () => {
+					data = buffer;
+				});
+			});
+			msg.once("end", () => {});
+		});
+		f.once("error", (err) => {
+			reject(err);
+			conn.end();
+		});
+		f.once("end", () => {
+			resolve(data);
+		});
+	});
+};
+
+const getMailFromDirectory = (conn, directory, sequence) => {
+	return new Promise((resolve, reject) => {
+		onceReady(conn)
+		.then((conn) => openBox(conn, directory))
+		.then((conn, box) => fetchMeta(conn, sequence))
+		.then(async (meta) => {
+			let mail = [];
+			for (m of meta) {
+				const parts = parseMailStruct(m.attrs.struct);
+				const att = attachmentsFromParts(parts);
+				const body = await fetchPart(conn, m.attrs.uid, "1.2"); // TODO
+				mail.push({
+					id: m.attrs.uid,
+					title: m.header.subject[0],
+					from: m.header.from[0], // TODO
+					to: m.header.from[0], // TODO
+					date: m.header.date[0],
+					body: body,
+					attachments: att
+				});
+			}
+			resolve(mail);
+		});
 	});
 }
 
