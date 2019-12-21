@@ -37,7 +37,7 @@ const onceReady = (connection) => {
 		});
 		connection.once("error", reject);
 		connection.once("end", () => {
-			console.log("IMAP end");
+			//console.log("IMAP end");
 		});
 		connection.connect();
 	});
@@ -47,10 +47,10 @@ const openBox = (connection, directory) => {
 	return new Promise((resolve, reject) => {
 		connection.openBox(directory, true, (err, box) => {
 			if (err) {
-				reject(err);
 				connection.end();
+				reject(err);
 			} else {
-				resolve(connection, box);
+				resolve({conn: connection, box: box});
 			}
 		});
 	});
@@ -123,7 +123,7 @@ const fetchPart = (conn, uid, partID) => {
 	});
 };
 
-const getMailFromDirectory = (conn, directory, sequence) => {
+const getSeqFromDirectory = (conn, directory, sequence) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
 		.then((conn) => openBox(conn, directory))
@@ -146,6 +146,43 @@ const getMailFromDirectory = (conn, directory, sequence) => {
 			}
 			resolve(mail);
 		});
+	});
+}
+
+const getMailFromDirectory = (conn, directory, offset, limit) => {
+	return new Promise((resolve, reject) => {
+		onceReady(conn)
+		.then((conn) => openBox(conn, directory))
+		.then((cb) => fetchMeta(cb.conn, cb.box.messages.total+":*"))
+		.then(async (meta) => {
+			let mail = [];
+			let begin = offset;
+			let end = offset+limit;
+			if (begin >= meta.length) {
+				begin = meta.length-1;
+			}
+			if (end >= meta.length) {
+				end = meta.length;
+			}
+			for (i = end-1; i >= begin; i--) {
+				const m = meta[i];
+				console.log(m);
+				const parts = parseMailStruct(m.attrs.struct);
+				const att = attachmentsFromParts(parts);
+				//const body = await fetchPart(conn, m.attrs.uid, "1.2"); // TODO
+				const body = ""; // TODO
+				mail.push({
+					id: m.attrs.uid,
+					title: m.header.subject[0],
+					from: m.header.from[0], // TODO
+					to: m.header.from[0], // TODO
+					date: m.header.date[0],
+					body: body,
+					attachments: att
+				});
+			}
+			resolve(mail);
+		}).catch(reject);
 	});
 }
 

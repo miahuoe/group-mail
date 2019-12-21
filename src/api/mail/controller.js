@@ -6,7 +6,7 @@ const Joi = require("joi");
 // https://github.com/mscdex/node-imap
 
 const getMail = async (req, res, next) => {
-	// TODO limit, offset, search
+	// TODO search
 	const schema = Joi.object({
 		offset: Joi.number().integer().min(0).max(1000).default(0),
 		limit: Joi.number().integer().min(5).max(50).default(10),
@@ -26,10 +26,15 @@ const getMail = async (req, res, next) => {
 		//const i = connect(g.maillocal, g.mailpass);
 		const user = process.env.TEST_IMAP_USER;
 		const pass = process.env.TEST_IMAP_PASS;
-		const conn = await connect(user, pass);
-		const mail = await getMailFromDirectory(conn, v.value.directory, "44"); // TODO offset, limit
-		conn.end();
-		res.status(200).json(mail);
+		const conn = await connect(user, pass)
+		getMailFromDirectory(conn, v.value.directory, v.value.offset, v.value.limit).then((mail) => {
+			res.status(200).json(mail);
+		}).catch((e) => {
+			res.status(500).json(e);
+			console.log(e);
+		}).finally(() => {
+			conn.end();
+		});
 	} catch (e) {
 		console.log(e);
 		res.status(400).json({error: e});
