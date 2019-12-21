@@ -1,5 +1,6 @@
 const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
+const mimemessage = require("mimemessage");
 
 const parseMailStruct = (struct, parts) => {
 	parts = parts || [];
@@ -123,6 +124,34 @@ const fetchPart = (conn, uid, partID) => {
 	});
 };
 
+const addMail = (conn, directory, mail) => {
+	return new Promise((resolve, reject) => {
+		onceReady(conn)
+		.then((conn) => openBox(conn, directory)).then((cb) => {
+			const msg = mimemessage.factory({
+				contentType: "multipart/alternate",
+				body: []
+			});
+			const plainEntity = mimemessage.factory({
+				body: mail.body
+			});
+			if (!Array.isArray(mail.recipients)) {
+				mail.recipients = [mail.recipients]
+			}
+			msg.header("To", mail.recipients.join(", "));
+			msg.header("Subject", mail.subject);
+			msg.body.push(plainEntity);
+			cb.conn.append(msg.toString(), {
+				mailbox: directory,
+			}, reject);
+			resolve({todo: "respond with mail"}); // TODO respond with mail
+		}).catch((e) => {
+			console.log(e);
+			reject(e);
+		});
+	});
+};
+
 const getSeqFromDirectory = (conn, directory, sequence) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
@@ -153,8 +182,17 @@ const getMailFromDirectory = (conn, directory, offset, limit) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
 		.then((conn) => openBox(conn, directory))
-		.then((cb) => fetchMeta(cb.conn, cb.box.messages.total+":*"))
-		.then(async (meta) => {
+		.then((cb) => {
+			if (cb.box.messages.total == 0) {
+				return undefined;
+			}
+			return fetchMeta(cb.conn, "1:*")
+		}).then(async (meta) => {
+			if (!meta) {
+				resolve([]);
+				return;
+			}
+			meta.reverse();
 			let mail = [];
 			let begin = offset;
 			let end = offset+limit;
@@ -164,30 +202,31 @@ const getMailFromDirectory = (conn, directory, offset, limit) => {
 			if (end >= meta.length) {
 				end = meta.length;
 			}
-			for (i = end-1; i >= begin; i--) {
+			for (i = begin; i < end; i++) {
 				const m = meta[i];
-				console.log(m);
 				const parts = parseMailStruct(m.attrs.struct);
 				const att = attachmentsFromParts(parts);
-				//const body = await fetchPart(conn, m.attrs.uid, "1.2"); // TODO
-				const body = ""; // TODO
+				//const body = await fetchPart(conn, m.attrs.uid, "1"); // TODO
+				const body = ""; // TODO base64
 				mail.push({
 					id: m.attrs.uid,
-					title: m.header.subject[0],
-					from: m.header.from[0], // TODO
-					to: m.header.from[0], // TODO
-					date: m.header.date[0],
+					title: m.header.subject?m.header.subject[0]:"",
+					from: m.header.from?m.header.from[0]:"", // TODO
+					to: m.header.to?m.header.to[0]:"", // TODO
+					date: m.header.date?m.header.date[0]:"",
 					body: body,
 					attachments: att
 				});
 			}
 			resolve(mail);
-		}).catch(reject);
+		}).catch((err) => {
+			console.log(err);
+		});
 	});
 }
 
 module.exports = {
-	getMailFromDirectory
+	getMailFromDirectory, addMail
 };
 
 // vim:noai:ts=4:sw=4

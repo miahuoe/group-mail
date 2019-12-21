@@ -1,9 +1,50 @@
 const Group = require("../groups/model");
-const { getMailFromDirectory } = require("./model");
+const { getMailFromDirectory, addMail } = require("./model");
 const { connect } = require("../../services/imap");
 const Joi = require("joi");
 
 // https://github.com/mscdex/node-imap
+
+const addDraft = async (req, res, next) => {
+	const schema = Joi.object({
+		subject: Joi.string(),
+		body: Joi.string(),
+		recipients: Joi.array().items(Joi.string()),
+		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+	});
+	const v = schema.validate({
+		subject: req.body.title,
+		body: req.body.body,
+		recipients: req.body.recipients,
+		directory: req.params.directory,
+	});
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
+	if (v.value.directory != "Drafts") {
+		res.status(400).json({
+			error: "Cannot create mail there"
+		});
+	}
+	try {
+		if (v.value.directory != "INBOX") {
+			v.value.directory = "[Gmail]/"+v.value.directory
+		}
+		const user = process.env.TEST_IMAP_USER;
+		const pass = process.env.TEST_IMAP_PASS;
+		const conn = await connect(user, pass)
+		const mail = await addMail(conn, v.value.directory, {
+			subject: v.value.subject,
+			body: v.value.body,
+			recipients: v.value.recipients
+			// TODO from YOU
+		});
+		res.status(201).json(mail);
+	} catch (e) {
+		res.status(500).json(e);
+	}
+};
 
 const getMail = async (req, res, next) => {
 	// TODO search
@@ -22,6 +63,9 @@ const getMail = async (req, res, next) => {
 		return;
 	}
 	try {
+		if (v.value.directory != "INBOX") {
+			v.value.directory = "[Gmail]/"+v.value.directory
+		}
 		//const g = await Group.query().findById(req.groupId);
 		//const i = connect(g.maillocal, g.mailpass);
 		const user = process.env.TEST_IMAP_USER;
@@ -75,7 +119,7 @@ const getMessage = async (req, res, next) => {
 }
 
 module.exports = {
-	getMail, getMessage
+	getMail, getMessage, addDraft,
 };
 
 // vim: noai:ts=4:sw=4
