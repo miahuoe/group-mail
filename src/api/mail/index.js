@@ -1,15 +1,17 @@
 const { Router } = require("express")
 const router = Router()
-const { getMail, getMessage, addDraft } = require("./controller")
+const { getMessage, getMessages, deleteMessage, addMessage } = require("./controller")
 const token = require("../../middlewares/token")
 
 // https://github.com/mscdex/node-imap
 
-router.get("/:directory", token, getMail);
+router.get("/:directory", token, getMessages);
 
-router.post("/:directory", token, addDraft);
+router.post("/:directory", token, addMessage);
 
-router.get("/:directory/:messageId", token, getMessage);
+router.get("/:directory/messages/:messageId", token, getMessage);
+
+router.delete("/:directory/messages/:messageId", token, deleteMessage);
 
 
 //router.post("/", token, addComment);

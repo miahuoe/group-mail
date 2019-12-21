@@ -124,7 +124,7 @@ const fetchPart = (conn, uid, partID) => {
 	});
 };
 
-const addMail = (conn, directory, mail) => {
+const addMessage = (conn, directory, mail) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
 		.then((conn) => openBox(conn, directory)).then((cb) => {
@@ -139,16 +139,15 @@ const addMail = (conn, directory, mail) => {
 				mail.recipients = [mail.recipients]
 			}
 			msg.header("To", mail.recipients.join(", "));
+			// TODO from
+			// TODO date not showing
 			msg.header("Subject", mail.subject);
 			msg.body.push(plainEntity);
 			cb.conn.append(msg.toString(), {
 				mailbox: directory,
 			}, reject);
 			resolve({todo: "respond with mail"}); // TODO respond with mail
-		}).catch((e) => {
-			console.log(e);
-			reject(e);
-		});
+		}).catch(reject);
 	});
 };
 
@@ -178,7 +177,7 @@ const getSeqFromDirectory = (conn, directory, sequence) => {
 	});
 }
 
-const getMailFromDirectory = (conn, directory, offset, limit) => {
+const getMessages = (conn, directory, offset, limit) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
 		.then((conn) => openBox(conn, directory))
@@ -225,8 +224,27 @@ const getMailFromDirectory = (conn, directory, offset, limit) => {
 	});
 }
 
+const deleteMessage = (conn, directory, id) => {
+	return new Promise((resolve, reject) => {
+		onceReady(conn)
+		.then((conn) => openBox(conn, directory))
+		.then((cb) => {
+			const conn = cb.conn;
+			//const box = cb.box;
+			conn.addFlags(id, "Deleted", (err) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve();
+				}
+			});
+		});
+	});
+};
+
+
 module.exports = {
-	getMailFromDirectory, addMail
+	getMessages, addMessage, deleteMessage
 };
 
 // vim:noai:ts=4:sw=4
