@@ -84,13 +84,21 @@ const fetchMeta = (conn, which) => {
 					attrs: attrs
 				});
 			});
+			msg.once("error", (err) => {
+				reject(err);
+				conn.end();
+			});
 		});
 		f.once("error", (err) => {
 			reject(err);
 			conn.end();
 		});
 		f.once("end", () => {
-			resolve(meta);
+			if (meta.length == 0) {
+				reject("No such message");
+			} else {
+				resolve(meta);
+			}
 		});
 	});
 };
@@ -111,6 +119,10 @@ const fetchPart = (conn, uid, partID) => {
 				stream.once("end", () => {
 					data = buffer;
 				});
+			});
+			msg.on("error", (err) => {
+				reject(err);
+				conn.end();
 			});
 			msg.once("end", () => {});
 		});
@@ -151,28 +163,17 @@ const addMessage = (conn, directory, mail) => {
 	});
 };
 
-const getSeqFromDirectory = (conn, directory, sequence) => {
+const getPart = (conn, directory, uid, partid) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
 		.then((conn) => openBox(conn, directory))
-		.then((conn, box) => fetchMeta(conn, sequence))
-		.then(async (meta) => {
-			let mail = [];
-			for (m of meta) {
-				const parts = parseMailStruct(m.attrs.struct);
-				const att = attachmentsFromParts(parts);
-				const body = await fetchPart(conn, m.attrs.uid, "1.2"); // TODO
-				mail.push({
-					id: m.attrs.uid,
-					title: m.header.subject[0],
-					from: m.header.from[0], // TODO
-					to: m.header.from[0], // TODO
-					date: m.header.date[0],
-					body: body,
-					attachments: att
-				});
-			}
-			resolve(mail);
+		.then((cb) => {
+			fetchMeta(cb.conn, uid)
+			.then((meta) => {
+				fetchPart(cb.conn, uid, partid)
+				.then(resolve)
+				.catch((e) => reject("No such attachment"));
+			}).catch((e) => reject("No such message"));
 		});
 	});
 }
@@ -213,7 +214,7 @@ const getMessages = (conn, directory, offset, limit) => {
 					from: m.header.from?m.header.from[0]:"", // TODO
 					to: m.header.to?m.header.to[0]:"", // TODO
 					date: m.header.date?m.header.date[0]:"",
-					body: body,
+					//body: body,
 					attachments: att
 				});
 			}
@@ -244,7 +245,7 @@ const deleteMessage = (conn, directory, id) => {
 
 
 module.exports = {
-	getMessages, addMessage, deleteMessage
+	getPart, getMessages, addMessage, deleteMessage
 };
 
 // vim:noai:ts=4:sw=4

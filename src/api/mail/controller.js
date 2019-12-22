@@ -21,7 +21,7 @@ const addMessage = async (req, res, next) => {
 		recipients: Joi.array().items(Joi.string()),
 		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
 	});
-	const v = schema.validate({
+	let v = schema.validate({
 		subject: req.body.title,
 		body: req.body.body,
 		recipients: req.body.recipients,
@@ -31,20 +31,21 @@ const addMessage = async (req, res, next) => {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
-	if (v.value.directory != "Drafts") {
+	if (v.directory != "Drafts") {
 		res.status(400).json({
 			error: "Cannot create mail there"
 		});
 	}
+	v = v.value;
 	try {
-		if (v.value.directory != "INBOX") {
-			v.value.directory = "[Gmail]/"+v.value.directory // TODO
+		if (v.directory != "INBOX") {
+			v.directory = "[Gmail]/"+v.directory // TODO
 		}
 		const conn = await loginGroup(req.groupId);
-		const mail = await model.addMessage(conn, v.value.directory, {
-			subject: v.value.subject,
-			body: v.value.body,
-			recipients: v.value.recipients
+		const mail = await model.addMessage(conn, v.directory, {
+			subject: v.subject,
+			body: v.body,
+			recipients: v.recipients
 			// TODO from YOU
 		});
 		res.status(201).json(mail);
@@ -60,7 +61,7 @@ const getMessages = async (req, res, next) => {
 		limit: Joi.number().integer().min(5).max(50).default(10),
 		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
 	});
-	const v = schema.validate({
+	let v = schema.validate({
 		limit: req.query.limit,
 		offset: req.query.offset,
 		directory: req.params.directory,
@@ -69,12 +70,13 @@ const getMessages = async (req, res, next) => {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
+	v = v.value;
 	try {
-		if (v.value.directory != "INBOX") {
-			v.value.directory = "[Gmail]/"+v.value.directory // TODO
+		if (v.directory != "INBOX") {
+			v.directory = "[Gmail]/"+v.directory // TODO
 		}
 		const conn = await loginGroup(req.groupId);
-		model.getMessages(conn, v.value.directory, v.value.offset, v.value.limit).then((mail) => {
+		model.getMessages(conn, v.directory, v.offset, v.limit).then((mail) => {
 			res.status(200).json(mail);
 		}).catch((e) => {
 			res.status(500).json(e);
@@ -94,7 +96,7 @@ const getMessage = async (req, res, next) => {
 		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
 		messageId: Joi.number().integer(),
 	});
-	const v = schema.validate({
+	let v = schema.validate({
 		limit: req.query.limit,
 		offset: req.query.offset,
 		directory: req.params.directory,
@@ -104,11 +106,12 @@ const getMessage = async (req, res, next) => {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
+	v = v.value;
 	try {
 		const conn = await loginGroup(req.groupId);
-		const mail = await model.getMessages(conn, v.value.directory, v.value.messageId); // TODO offset, limit
+		const mail = await model.getMessages(conn, v.directory, v.messageId); // TODO offset, limit
 		conn.end();
-		res.status(200).json(mail);
+		res.status(200).json(mail[0]); // TODO index?
 	} catch (e) {
 		res.status(400).json({error: e}); // TODO
 	}
@@ -119,7 +122,7 @@ const deleteMessage = async (req, res, next) => {
 		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
 		messageId: Joi.number().integer(),
 	});
-	const v = schema.validate({
+	let v = schema.validate({
 		directory: req.params.directory,
 		messageId: req.params.messageId,
 	});
@@ -127,9 +130,10 @@ const deleteMessage = async (req, res, next) => {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
+	v = v.value;
 	try {
 		const conn = await loginGroup(req.groupId);
-		await model.deleteMessage(conn, v.value.directory, v.value.messageId);
+		await model.deleteMessage(conn, v.directory, v.messageId);
 		conn.end();
 		res.sendStatus(204);
 	} catch (e) {
@@ -137,8 +141,34 @@ const deleteMessage = async (req, res, next) => {
 	}
 };
 
+const getAttachment = async (req, res, next) => {
+	const schema = Joi.object({
+		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		messageId: Joi.number().integer(),
+		attachmentId: Joi.number().integer(),
+	});
+	let v = schema.validate({
+		directory: req.params.directory,
+		messageId: req.params.messageId,
+		attachmentId: req.params.attachmentId,
+	});
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
+	v = v.value;
+	try {
+		const conn = await loginGroup(req.groupId);
+		const atta = await model.getPart(conn, v.directory, v.messageId, v.attachmentId);
+		conn.end();
+		res.status(200).json(atta);
+	} catch (e) {
+		res.status(404).json({error: e});
+	}
+};
+
 module.exports = {
-	getMessages, getMessage, deleteMessage, addMessage,
+	getMessages, getMessage, deleteMessage, addMessage, getAttachment
 };
 
 // vim: noai:ts=4:sw=4
