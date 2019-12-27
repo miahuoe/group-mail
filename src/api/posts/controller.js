@@ -23,25 +23,31 @@ const getPosts = async (req, res, next) => {
 		offset: Joi.number().integer().min(0).max(1000).default(0),
 		limit: Joi.number().integer().min(5).max(50).default(10),
 	});
-	const v = schema.validate(req.query);
+	let v = schema.validate(req.query);
 	if (v.error) {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
+	v = v.value;
 	try {
 		const g = await Group.query().findById(req.groupId);
+		if (!g) throw 404;
 		const p = await g.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
 			.orderBy("created", "desc")
-			.limit(v.value.limit)
-			.offset(v.value.offset);
+			.limit(v.limit)
+			.offset(v.offset);
 		for (post of p) {
 			await post.$relatedQuery("author").select("id", "login", "email", "joined");
 			delete post.authorId;
 		}
 		res.status(200).json(p);
 	} catch (e) {
-		res.status(400).json(e); // TODO error
+		if (e === 404) {
+			res.status(404).json({error: "No such group"});
+		} else {
+			res.status(400).json(e); // TODO error
+		}
 	}
 }
 
