@@ -10,20 +10,22 @@ const generatePassword = () => {
 
 const create = async (req, res, next) => {
 	const schema = Joi.object({
+		description: Joi.string(),
 		maillocal: Joi.string().alphanum().min(4).max(20).required(),
 		name: Joi.string().alphanum().min(10).max(50).required(),
 	});
-	const v = schema.validate(req.body);
+	let v = schema.validate(req.body);
 	if (v.error) {
 		res.status(400).json({error: v.error.details[0].message});
 		return;
 	}
+	v = v.value;
 	const newGroup = {
 		adminId: req.user.id,
-		maillocal: v.value.maillocal,
+		maillocal: v.maillocal,
 		mailpass: generatePassword(),
-		name: v.value.name,
-		description: req.body.description
+		name: v.name,
+		description: v.description
 	};
 	try {
 		// TODO transaction?
