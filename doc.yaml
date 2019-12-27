@@ -664,7 +664,7 @@ components:
           type: integer
           format: int64
           readOnly: true
-        author:
+        authorId:
           type: integer
           format: int64
           readOnly: true
