@@ -56,10 +56,6 @@ class Group extends Model {
 			}
 		}
 	};
-
-	$beforeInsert() {
-		// set date
-	}
 }
 
 module.exports = Group;
