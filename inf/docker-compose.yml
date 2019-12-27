@@ -2,9 +2,17 @@ version: "3"
 
 services:
 
+  mail:
+    image: instrumentisto/dovecot
+    ports:
+      - "143:143"
+    expose:
+      - "143"
+    volumes:
+      - "./dovecot/:/etc/dovecot/"
+
   node:
     build: ./node
-    #image: node:10-buster
     user: node
     ports:
       - "3003:3003"
@@ -19,6 +27,11 @@ services:
       while ! nc -z db 3306;
       do
         echo 'waiting for db 3306';
+        sleep 2;
+      done &&
+      while ! nc -z mail 143;
+      do
+        echo 'waiting for mail 143';
         sleep 2;
       done &&
       npm run-script rollback &&
@@ -40,7 +53,7 @@ services:
     expose:
       - "3306"
     volumes:
-      - ./sqldump/:/docker-entrypoint-initdb.d
+      - ./sqldump:/docker-entrypoint-initdb.d
       - ./db-data:/var/lib/mysql
     restart: always
 
