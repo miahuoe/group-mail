@@ -167,8 +167,60 @@ const getAttachment = async (req, res, next) => {
 	}
 };
 
+const addAttachment = async (req, res, next) => {
+	const schema = Joi.object({
+		directory: Joi.string().valid("Drafts"),
+		messageId: Joi.number().integer(),
+	});
+	let v = schema.validate({
+		directory: req.params.directory,
+		messageId: req.params.messageId,
+	});
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
+	v = v.value;
+	try {
+		const conn = await loginGroup(req.groupId);
+		// TODO
+		//await model.deleteMessage(conn, v.directory, v.messageId+"."+v.attachmentId);
+		conn.end();
+		res.sendStatus(204);
+	} catch (e) {
+		res.status(400).json({error: e}); // TODO
+	}
+};
+
+const deleteAttachment = async (req, res, next) => {
+	const schema = Joi.object({
+		directory: Joi.string().valid("Drafts"),
+		messageId: Joi.number().integer(),
+		attachmentId: Joi.number().integer(),
+	});
+	let v = schema.validate({
+		directory: req.params.directory,
+		messageId: req.params.messageId,
+		attachmentId: req.params.attachmentId,
+	});
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
+	v = v.value;
+	try {
+		const conn = await loginGroup(req.groupId);
+		await model.deleteMessage(conn, v.directory, v.messageId+"."+v.attachmentId); // TODO ?
+		conn.end();
+		res.sendStatus(204);
+	} catch (e) {
+		res.status(400).json({error: e}); // TODO
+	}
+};
+
 module.exports = {
-	getMessages, getMessage, deleteMessage, addMessage, getAttachment
+	getMessages, getMessage, deleteMessage, addMessage,
+	getAttachment, addAttachment, deleteAttachment
 };
 
 // vim: noai:ts=4:sw=4

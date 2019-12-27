@@ -1,6 +1,7 @@
 const { Router } = require("express")
 const router = Router()
-const { getMessage, getMessages, deleteMessage, addMessage, getAttachment } = require("./controller")
+const { getMessage, getMessages, deleteMessage, addMessage,
+	getAttachment, addAttachment, deleteAttachment } = require("./controller")
 const token = require("../../middlewares/token")
 
 // https://github.com/mscdex/node-imap
@@ -15,8 +16,9 @@ router.delete("/:directory/messages/:messageId", token, deleteMessage);
 
 router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, getAttachment);
 
+router.post("/:directory/messages/:messageId/attachments", token, addAttachment);
 
-//router.post("/", token, addComment);
+router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, deleteAttachment);
 
 module.exports = router;
 

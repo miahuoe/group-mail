@@ -163,6 +163,36 @@ const addMessage = (conn, directory, mail) => {
 	});
 };
 
+const addAttachment = (conn, directory, mail) => {
+	// TODO get message, get all attachments, append attachment, append message?
+	/*
+	return new Promise((resolve, reject) => {
+		onceReady(conn)
+		.then((conn) => openBox(conn, directory)).then((cb) => {
+			const msg = mimemessage.factory({
+				contentType: "multipart/alternate",
+				body: []
+			});
+			const plainEntity = mimemessage.factory({
+				body: mail.body
+			});
+			if (!Array.isArray(mail.recipients)) {
+				mail.recipients = [mail.recipients]
+			}
+			msg.header("To", mail.recipients.join(", "));
+			// TODO from
+			// TODO date not showing
+			msg.header("Subject", mail.subject);
+			msg.body.push(plainEntity);
+			cb.conn.append(msg.toString(), {
+				mailbox: directory,
+			}, reject);
+			resolve({todo: "respond with mail"}); // TODO respond with mail
+		}).catch(reject);
+	});
+	*/
+};
+
 const getPart = (conn, directory, uid, partid) => {
 	return new Promise((resolve, reject) => {
 		onceReady(conn)
@@ -220,7 +250,7 @@ const getMessages = (conn, directory, offset, limit) => {
 			}
 			resolve(mail);
 		}).catch((err) => {
-			console.log(err);
+			console.log(err); // TODO
 		});
 	});
 }
@@ -231,7 +261,6 @@ const deleteMessage = (conn, directory, id) => {
 		.then((conn) => openBox(conn, directory))
 		.then((cb) => {
 			const conn = cb.conn;
-			//const box = cb.box;
 			conn.addFlags(id, "Deleted", (err) => {
 				if (err) {
 					reject(err);
@@ -245,7 +274,8 @@ const deleteMessage = (conn, directory, id) => {
 
 
 module.exports = {
-	getPart, getMessages, addMessage, deleteMessage
+	getPart, getMessages, addMessage, deleteMessage,
+	addAttachment,
 };
 
 // vim:noai:ts=4:sw=4
