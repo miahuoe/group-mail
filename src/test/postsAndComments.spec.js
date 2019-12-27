@@ -19,6 +19,26 @@ const group = {
 let groupId = 0;
 
 describe("posts & comments", () => {
+	it("should 401 when not authorized on GET posts", (done) => {
+		request(app)
+			.get(`/api/groups/1/posts`)
+			.expect(401, done);
+	});
+	it("should 401 when not authorized on POST posts", (done) => {
+		request(app)
+			.post(`/api/groups/1/posts`)
+			.expect(401, done);
+	});
+	it("should 401 when not authorized on GET comments", (done) => {
+		request(app)
+			.get(`/api/groups/1/posts/1/comments`)
+			.expect(401, done);
+	});
+	it("should 401 when not authorized on POST comment", (done) => {
+		request(app)
+			.post(`/api/groups/1/posts/1/comments`)
+			.expect(401, done);
+	});
 	it("should create an user", (done) => {
 		const req = {
 			login: login,
@@ -54,6 +74,7 @@ describe("posts & comments", () => {
 			})
 			.expect(201, done);
 	});
+	// TODO existing but not joined to
 	it("should 404 for inexistent group when getting", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId+2}/posts`)
@@ -61,6 +82,11 @@ describe("posts & comments", () => {
 				Authorization: "Token "+token,
 			})
 			.expect(404, done);
+	});
+	it("should 401 when not authorized", (done) => {
+		request(app)
+			.post(`/api/groups/${groupId+2}/posts`)
+			.expect(401, done);
 	});
 	it("should 404 for inexistent group when posting", (done) => {
 		request(app)
@@ -122,20 +148,19 @@ describe("posts & comments", () => {
 	it(`should get posts`, (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/posts`)
-			.query({
-				limit: 5,
-				offset: 0
-			})
 			.set({
 				Authorization: "Token "+token,
 			})
 			.expect((res) => {
 				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
 				res.body[0].should.have.property("id");
 				res.body[0].should.have.property("body");
 				res.body[0].should.have.property("author");
-				res.body[0].id.should.be.equal(posts[0]);
-				res.body[1].id.should.be.equal(posts[1]);
+
+				//TODO test ordering, limit and offset
+				//res.body[0].id.should.be.equal(posts[0]);
+				//res.body[1].id.should.be.equal(posts[1]);
 			})
 			.expect(200, done);
 	});
