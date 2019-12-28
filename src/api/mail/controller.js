@@ -22,7 +22,7 @@ const addMessage = async (req, res, next) => {
 		subject: Joi.string(),
 		body: Joi.string(),
 		recipients: Joi.array().items(Joi.string()),
-		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts"),
 	});
 	let v = schema.validate({
 		subject: req.body.title,
@@ -38,6 +38,7 @@ const addMessage = async (req, res, next) => {
 		res.status(400).json({
 			error: "Cannot create mail there" // TODO
 		});
+		return;
 	}
 	v = v.value;
 	try {
@@ -59,7 +60,7 @@ const getMessages = async (req, res, next) => {
 	const schema = Joi.object({
 		offset: Joi.number().integer().min(0).max(1000).default(0),
 		limit: Joi.number().integer().min(5).max(50).default(10),
-		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts"),
 	});
 	let v = schema.validate({
 		limit: req.query.limit,
@@ -90,7 +91,7 @@ const getMessage = async (req, res, next) => {
 	const schema = Joi.object({
 		offset: Joi.number().integer().min(0).max(1000).default(0),
 		limit: Joi.number().integer().min(5).max(50).default(10),
-		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts"),
 		messageId: Joi.number().integer(),
 	});
 	let v = schema.validate({
@@ -116,7 +117,7 @@ const getMessage = async (req, res, next) => {
 
 const deleteMessage = async (req, res, next) => {
 	const schema = Joi.object({
-		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts"),
 		messageId: Joi.number().integer(),
 	});
 	let v = schema.validate({
@@ -140,7 +141,7 @@ const deleteMessage = async (req, res, next) => {
 
 const getAttachment = async (req, res, next) => {
 	const schema = Joi.object({
-		directory: Joi.string().valid("INBOX", "Sent", "Outbox", "Spam", "Drafts"),
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts"),
 		messageId: Joi.number().integer(),
 		attachmentId: Joi.number().integer(),
 	});
