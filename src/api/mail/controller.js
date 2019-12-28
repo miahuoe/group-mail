@@ -7,10 +7,13 @@ const Joi = require("joi");
 
 const loginGroup = async (groupId) => {
 	// TODO
-	// const g = await Group.query().findById(req.groupId);
+	const g = await Group.query().findById(groupId);
+	if (!g) return "g404";
+	const user = g.maillocal;
+	const pass = g.mailpass;
 	// g.maillocal, g.mailpass
-	const user = process.env.TEST_IMAP_USER;
-	const pass = process.env.TEST_IMAP_PASS;
+	//const user = process.env.TEST_IMAP_USER;
+	//const pass = process.env.TEST_IMAP_PASS;
 	return connect(user, pass);
 };
 
@@ -33,14 +36,11 @@ const addMessage = async (req, res, next) => {
 	}
 	if (v.directory != "Drafts") {
 		res.status(400).json({
-			error: "Cannot create mail there"
+			error: "Cannot create mail there" // TODO
 		});
 	}
 	v = v.value;
 	try {
-		if (v.directory != "INBOX") {
-			v.directory = "[Gmail]/"+v.directory // TODO
-		}
 		const conn = await loginGroup(req.groupId);
 		const mail = await model.addMessage(conn, v.directory, {
 			subject: v.subject,
@@ -72,9 +72,6 @@ const getMessages = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		if (v.directory != "INBOX") {
-			v.directory = "[Gmail]/"+v.directory // TODO
-		}
 		const conn = await loginGroup(req.groupId);
 		model.getMessages(conn, v.directory, v.offset, v.limit).then((mail) => {
 			res.status(200).json(mail);
