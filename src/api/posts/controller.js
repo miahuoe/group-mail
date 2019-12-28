@@ -31,7 +31,7 @@ const getPosts = async (req, res, next) => {
 	v = v.value;
 	try {
 		const g = await Group.query().findById(req.groupId);
-		if (!g) throw 404;
+		if (!g) throw "g404";
 		const p = await g.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
 			.orderBy("created", "desc")
@@ -43,7 +43,7 @@ const getPosts = async (req, res, next) => {
 		}
 		res.status(200).json(p);
 	} catch (e) {
-		if (e === 404) {
+		if (e === "g404") {
 			res.status(404).json({error: "No such group"});
 		} else {
 			res.status(400).json(e); // TODO error
