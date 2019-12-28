@@ -1,6 +1,7 @@
 const Group = require("./model");
 const User = require("../users/model");
 const Joi = require("joi");
+const md5 = require("md5");
 
 //const { transaction } = require("objection");
 
@@ -20,10 +21,12 @@ const create = async (req, res, next) => {
 		return;
 	}
 	v = v.value;
+	const password = generatePassword();
 	const newGroup = {
 		adminId: req.user.id,
 		maillocal: v.maillocal,
-		mailpass: generatePassword(),
+		mailpass: password,
+		mailpassmd5: md5(password),
 		name: v.name,
 		description: v.description
 	};
@@ -33,6 +36,7 @@ const create = async (req, res, next) => {
 		const r = await g.$relatedQuery("users").relate(req.user.id);
 		delete g.adminId;
 		delete g.mailpass;
+		delete g.mailpassmd5;
 		res.status(201).json(g);
 	} catch (err) {
 		if (err.code == "ER_DUP_ENTRY") {
@@ -46,6 +50,7 @@ const create = async (req, res, next) => {
 		} else {
 			res.status(500).json({
 				message: "Other error :(",
+				error: err
 			});
 		}
 	}
