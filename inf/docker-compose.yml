@@ -9,7 +9,8 @@ services:
     expose:
       - "143"
     volumes:
-      - "./dovecot/:/etc/dovecot/"
+      - "./mail/dovecot:/etc/dovecot"
+      - "./mail/home:/home"
 
   node:
     build: ./node
