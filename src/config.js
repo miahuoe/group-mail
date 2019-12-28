@@ -21,15 +21,15 @@ const config = {
 		rounds: 10
 	},
 	imapConnection: {
-		//host: "mail",
-		//port: "143",
-		//tls: false
-		host: "imap.gmail.com",
-		port: 993,
-		tls: true,
-		tlsOptions: {
-			servername: "imap.gmail.com"
-		},
+		host: "mail",
+		port: "143",
+		tls: false
+		//host: "imap.gmail.com",
+		//port: 993,
+		//tls: true,
+		//tlsOptions: {
+		//	servername: "imap.gmail.com"
+		//},
 	},
 	limits: {
 		login: {
