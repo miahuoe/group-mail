@@ -17,12 +17,13 @@ class Group extends Model {
 	static get jsonSchema() {
 		return {
 			type: "object",
-			required: ["adminId", "maillocal", "name", "description"],
+			required: ["adminId", "maillocal", "mailpass", "mailpassmd5", "name", "description"],
 			properties: {
 				id: {type: "integer"},
 				adminId: {type: "integer"},
 				maillocal: {type: "string"},
 				mailpass: {type: "string"},
+				mailpassmd5: {type: "string"},
 				name: {type: "string"},
 				description: {type: "string"},
 				created: {type: "string", format: "date-time"}
