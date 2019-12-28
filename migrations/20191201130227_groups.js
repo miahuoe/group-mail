@@ -11,10 +11,11 @@ exports.up = function(knex) {
 
 		table.string("maillocal").notNull();
 		table.string("mailpass").notNull();
+		table.string("mailpassmd5").notNull();
 
 		table.unique(["maillocal"]);
 		table.unique(["name"]);
-	});
+	}).raw(`ALTER TABLE ${tableName} AUTO_INCREMENT = 10000`); // NOTE dovecot accepts only >500
 };
 
 exports.down = function(knex) {
