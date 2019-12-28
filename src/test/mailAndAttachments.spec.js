@@ -66,6 +66,36 @@ describe("mail & attachments", () => {
 			})
 			.expect(200, done);
 	});
+	it("should reject mail with missing field", (done) => {
+		const mail = {
+			title: "title",
+			recipients: ["mail@mail.com"],
+		};
+		request(app)
+			.post(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.send(mail)
+			.expect(400, done);
+	});
+	it("should update mail", (done) => {
+		const mail = {
+			title: "title",
+			recipients: ["mail@mail.com"],
+			body: "hello",
+		};
+		request(app)
+			.put(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.send(mail)
+			.expect((res) => {
+				res.body.should.have.property("id");
+			})
+			.expect(201, done);
+	});
 })
 
 // vim: noai:ts=4:sw=4
