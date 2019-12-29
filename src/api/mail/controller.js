@@ -59,7 +59,9 @@ const getMessage = async (req, res, next) => {
 	v = v.value;
 	try {
 		const conn = await loginGroup(req.groupId);
-		const mail = await model.getMessages(conn, v.directory, v.messageId);
+		//const mail = await model.getMessages(conn, v.directory, v.messageId);
+		res.sendStatus(501);
+		return;
 		if (!mail || mail.length == 0) {
 			throw "m404";
 		}
@@ -129,7 +131,7 @@ const addMessage = async (req, res, next) => {
 			body: v.body,
 			recipients: v.recipients
 			// TODO from YOU
-		});
+		}, []);
 		res.status(201).json(mail);
 	} catch (e) {
 		res.status(500).json(e);
@@ -163,12 +165,37 @@ const getAttachment = async (req, res, next) => {
 		conn.end();
 		res.status(200).json(atta);
 	} catch (e) {
-		res.status(404).json({error: e});
+		res.status(404).json({error: "No such attachment"}); // TODO
 	}
 };
 
 const addAttachment = async (req, res, next) => {
-	res.sendStatus(501);
+	if(!req.file) {
+		res.status(400).json({error: "Need files"});
+		return;
+	}
+	const schema = Joi.object({
+		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
+		messageId: Joi.number().integer().required(),
+	});
+	let v = schema.validate({
+		directory: req.params.directory,
+		messageId: req.params.messageId,
+	});
+	if (v.error) {
+		res.status(400).json({error: v.error.details[0].message});
+		return;
+	}
+	v = v.value;
+	try {
+		const conn = await loginGroup(req.groupId);
+		console.log(req.file);
+		await model.addAttachment(conn, v.directory, v.messageId, req.file);
+		conn.end();
+		res.sendStatus(201);
+	} catch (e) {
+		res.status(404).json({error: e});
+	}
 };
 
 const deleteAttachment = async (req, res, next) => {
