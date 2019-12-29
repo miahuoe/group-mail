@@ -1,8 +1,10 @@
-const { Router } = require("express")
-const router = Router()
+const { Router } = require("express");
+const router = Router();
 const { getMessage, getMessages, deleteMessage, addMessage, updateMessage,
-	getAttachment, addAttachment, deleteAttachment } = require("./controller")
-const token = require("../../middlewares/token")
+	getAttachment, addAttachment, deleteAttachment } = require("./controller");
+const token = require("../../middlewares/token");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/"});
 
 // https://github.com/mscdex/node-imap
 
@@ -13,7 +15,7 @@ router.get("/:directory/messages/:messageId", token, getMessage);
 router.put("/:directory/messages/:messageId", token, updateMessage);
 router.delete("/:directory/messages/:messageId", token, deleteMessage);
 
-router.post("/:directory/messages/:messageId/attachments", token, addAttachment);
+router.post("/:directory/messages/:messageId/attachments", token, upload.single("file"), addAttachment);
 
 router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, getAttachment);
 router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, deleteAttachment);
