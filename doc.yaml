@@ -739,7 +739,7 @@ components:
           type: string
           format: date-time
           readOnly: true
-        title:
+        subject:
           type: string
         recipients:
           type: array
