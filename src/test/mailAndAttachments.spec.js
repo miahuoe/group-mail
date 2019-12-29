@@ -18,6 +18,7 @@ const group = {
 };
 let groupId = 0;
 let mailId = 0;
+let attId = 0;
 
 describe("mail & attachments", () => {
 	it("should create an user", (done) => {
@@ -132,6 +133,9 @@ describe("mail & attachments", () => {
 				res.body.should.not.be.empty;
 				res.body.should.have.length(1);
 				res.body[0].should.have.property("id");
+				res.body[0].should.have.property("attachments");
+				res.body[0].attachments.should.be.an.array;
+				res.body[0].attachments.should.be.empty;
 				mailId = res.body[0].id;
 			})
 			.end(done);
@@ -143,7 +147,7 @@ describe("mail & attachments", () => {
 			body: "hello 2",
 		};
 		request(app)
-			.put(`/api/groups/${groupId}/mail/Drafts/${mailId}`)
+			.put(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
 			.set({
 				Authorization: "Token "+token,
 			})
@@ -154,6 +158,53 @@ describe("mail & attachments", () => {
 				res.body.subject.should.be.equal("wassup?");
 			})
 			.end(done);
+	});
+	it("should append an attachment", (done) => {
+		request(app)
+			.post(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.attach("file", "doc.yaml")
+			.expect(201)
+			.end(done);
+	});
+	it("should get Drafts folder with one message with one attachment", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(200)
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
+				res.body.should.have.length(1);
+				res.body[0].should.have.property("id");
+				res.body[0].should.be.equal(mailId);
+				res.body[0].should.have.property("attachments");
+				res.body[0].attachments.should.be.an.array;
+				res.body[0].attachments.should.not.be.empty;
+				res.body[0].attachments.should.have.length(1);
+				res.body[0].attachments[0].should.have.property("id");
+				attId = res.body[0].attachment[0];
+			})
+			.end(done);
+	});
+	it("should download an attachment", (done) => {
+		request(app)
+			.post(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(200)
+			.end((err, res) => {
+				assert.ifError(err);
+				const file = res.files.file;
+  				//file.name.should.equal("file");
+  				file.type.should.equal("text/html");
+  				read(file.path).should.equal(read("doc.yml"));
+			});
 	});
 })
 
