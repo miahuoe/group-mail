@@ -155,11 +155,17 @@ const addMessage = (conn, directory, mail) => {
 			// TODO date not showing
 			msg.header("Subject", mail.subject);
 			msg.body.push(plainEntity);
-			cb.conn.append(msg.toString(), {
+			const options = {
 				mailbox: directory,
-			}, reject);
-			// TODO ID???
-			resolve(mail)
+			};
+			cb.conn.append(msg.toString(), options, (err) => {
+				if (err) {
+					reject(err);
+				} else {
+					// TODO ID???
+					resolve(mail)
+				}
+			});
 		}).catch(reject);
 	});
 };
@@ -218,7 +224,7 @@ const getMessages = (conn, directory, offset, limit) => {
 				return undefined;
 			}
 			return fetchMeta(cb.conn, "1:*")
-		}).then(async (meta) => {
+		}).then((meta) => {
 			if (!meta) {
 				resolve([]);
 				return;
