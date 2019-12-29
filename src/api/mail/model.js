@@ -158,7 +158,8 @@ const addMessage = (conn, directory, mail) => {
 			cb.conn.append(msg.toString(), {
 				mailbox: directory,
 			}, reject);
-			resolve({todo: "respond with mail"}); // TODO respond with mail
+			// TODO ID???
+			resolve(mail)
 		}).catch(reject);
 	});
 };
@@ -240,7 +241,7 @@ const getMessages = (conn, directory, offset, limit) => {
 				const body = ""; // TODO base64
 				mail.push({
 					id: m.attrs.uid,
-					title: m.header.subject?m.header.subject[0]:"",
+					subject: m.header.subject?m.header.subject[0]:"",
 					from: m.header.from?m.header.from[0]:"", // TODO
 					to: m.header.to?m.header.to[0]:"", // TODO
 					date: m.header.date?m.header.date[0]:"",
