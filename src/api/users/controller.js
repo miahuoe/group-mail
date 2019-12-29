@@ -12,7 +12,7 @@ const register = (req, res, next) => {
 			.max(limits.login.maxLength).required(),
 		email: Joi.string().email({
 			minDomainSegments: 2, // something.com
-			tlds: { allow: ["com", "net", "pl", "edu"] }
+			tlds: { allow: ["com"] }
 		}).required(),
 		password: Joi.string()
 			.min(limits.password.minLength)
