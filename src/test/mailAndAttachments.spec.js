@@ -17,6 +17,7 @@ const group = {
 	description: randomString()
 };
 let groupId = 0;
+let mailId = 0;
 
 describe("mail & attachments", () => {
 	it("should create an user", (done) => {
@@ -34,11 +35,13 @@ describe("mail & attachments", () => {
 		request(app)
 			.post("/api/users/login")
 			.auth(login, password)
+			.expect(200)
 			.expect("Content-Type", "application/json; charset=utf-8")
 			.expect((res) => {
+				res.body.should.have.property("token");
 				token = res.body.token;
 			})
-			.expect(200, done);
+			.end(done);
 	});
 	it("should create a new group", (done) => {
 		request(app)
@@ -48,11 +51,12 @@ describe("mail & attachments", () => {
 				"Content-Type": "application/json",
 			})
 			.send(group)
+			.expect(201)
 			.expect((res) => {
 				res.body.should.have.property("id");
 				groupId = res.body.id;
 			})
-			.expect(201, done);
+			.end(done);
 	});
 	it("should get empty Drafts folder", (done) => {
 		request(app)
@@ -60,15 +64,16 @@ describe("mail & attachments", () => {
 			.set({
 				Authorization: "Token "+token,
 			})
+			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
 				res.body.should.be.empty;
 			})
-			.expect(200, done);
+			.end(done);
 	});
 	it("should reject mail with missing field", (done) => {
 		const mail = {
-			title: "title",
+			subject: "subject",
 			recipients: ["mail@mail.com"],
 		};
 		request(app)
@@ -77,24 +82,78 @@ describe("mail & attachments", () => {
 				Authorization: "Token "+token,
 			})
 			.send(mail)
-			.expect(400, done);
+			.expect(400)
+			.end(done);
 	});
-	it("should update mail", (done) => {
+	it("should reject mail in directory other than Drafts", (done) => {
 		const mail = {
-			title: "title",
+			subject: "subject",
 			recipients: ["mail@mail.com"],
-			body: "hello",
 		};
 		request(app)
-			.put(`/api/groups/${groupId}/mail/Drafts`)
+			.post(`/api/groups/${groupId}/mail/Sent`)
 			.set({
 				Authorization: "Token "+token,
 			})
 			.send(mail)
-			.expect((res) => {
-				res.body.should.have.property("id");
+			.expect(400)
+			.end(done);
+	});
+	it("should add mail", (done) => {
+		const mail = {
+			subject: "subject",
+			recipients: ["mail@mail.com"],
+			body: "hello",
+		};
+		request(app)
+			.post(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
 			})
-			.expect(201, done);
+			.send(mail)
+			.expect(201)
+			.expect((res) => {
+				res.body.should.have.property("subject");
+				res.body.subject.should.be.equal("subject");
+				//TODO
+				//res.body.should.have.property("id");
+			})
+			.end(done);
+	});
+	it("should get Drafts folder with one message", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(200)
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
+				res.body.should.have.length(1);
+				res.body[0].should.have.property("id");
+				mailId = res.body[0].id;
+			})
+			.end(done);
+	});
+	it("should update mail", (done) => {
+		const mail = {
+			subject: "wassup?",
+			recipients: ["mail@mail.com"],
+			body: "hello 2",
+		};
+		request(app)
+			.put(`/api/groups/${groupId}/mail/Drafts/${mailId}`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.send(mail)
+			.expect(201)
+			.expect((res) => {
+				res.body.should.have.property("subject");
+				res.body.subject.should.be.equal("wassup?");
+			})
+			.end(done);
 	});
 })
 
