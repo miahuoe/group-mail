@@ -3,9 +3,7 @@ const model = require("./model");
 const { connect } = require("../../services/imap");
 const Joi = require("joi");
 
-const loginGroup = async (groupId) => {
-	const g = await Group.query().findById(groupId);
-	if (!g) throw "g404";
+const loginGroup = async (group) => {
 	return connect(g.maillocal, g.mailpass);
 };
 
@@ -28,7 +26,9 @@ const getMessages = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const conn = await loginGroup(req.groupId);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
 		if (v.search) {
 			res.sendStatus(501);
 			// TODO search
@@ -58,7 +58,9 @@ const getMessage = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const conn = await loginGroup(req.groupId);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
 		//const mail = await model.getMessages(conn, v.directory, v.messageId);
 		res.sendStatus(501);
 		return;
@@ -91,7 +93,9 @@ const deleteMessage = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const conn = await loginGroup(req.groupId);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
 		await model.deleteMessage(conn, v.directory, v.messageId);
 		conn.end();
 		res.sendStatus(204);
@@ -104,13 +108,13 @@ const addMessage = async (req, res, next) => {
 	const schema = Joi.object({
 		subject: Joi.string().required(),
 		body: Joi.string().required(),
-		recipients: Joi.array().items(Joi.string()).required(),
+		to: Joi.array().items(Joi.string()).required(),
 		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 	});
 	let v = schema.validate({
 		subject: req.body.subject,
 		body: req.body.body,
-		recipients: req.body.recipients,
+		to: req.body.to,
 		directory: req.params.directory,
 	});
 	if (v.error) {
@@ -125,12 +129,14 @@ const addMessage = async (req, res, next) => {
 		return;
 	}
 	try {
-		const conn = await loginGroup(req.groupId);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
 		const mail = await model.addMessage(conn, v.directory, {
 			subject: v.subject,
 			body: v.body,
-			recipients: v.recipients
-			// TODO from YOU
+			to: v.to,
+			from: g.maillocal+"@mail.com",
 		}, []);
 		res.status(201).json(mail);
 	} catch (e) {
@@ -143,7 +149,6 @@ const updateMessage = async (req, res, next) => {
 };
 
 const getAttachment = async (req, res, next) => {
-	// TODO base64
 	const schema = Joi.object({
 		directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 		messageId: Joi.number().integer().required(),
@@ -160,18 +165,21 @@ const getAttachment = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const conn = await loginGroup(req.groupId);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
 		const atta = await model.getPart(conn, v.directory, v.messageId, v.attachmentId);
 		conn.end();
-		res.status(200).json(atta);
+		res.set("Content-Type", "application/octet-stream");
+		res.status(200).end(Buffer.from(atta), "binary");
 	} catch (e) {
-		res.status(404).json({error: "No such attachment"}); // TODO
+		res.status(404).json({error: e});
 	}
 };
 
 const addAttachment = async (req, res, next) => {
 	if(!req.file) {
-		res.status(400).json({error: "Need files"});
+		res.status(400).json({error: "File required"});
 		return;
 	}
 	const schema = Joi.object({
@@ -188,8 +196,10 @@ const addAttachment = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const conn = await loginGroup(req.groupId);
-		console.log(req.file);
+		const g = await Group.query().findById(req.groupId);
+		if (!g) throw "g404";
+		const conn = await loginGroup(g);
+		//console.log(req.file);
 		await model.addAttachment(conn, v.directory, v.messageId, req.file);
 		conn.end();
 		res.sendStatus(201);

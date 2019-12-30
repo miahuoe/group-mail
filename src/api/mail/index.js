@@ -3,8 +3,7 @@ const router = Router();
 const { getMessage, getMessages, deleteMessage, addMessage, updateMessage,
 	getAttachment, addAttachment, deleteAttachment } = require("./controller");
 const token = require("../../middlewares/token");
-const multer = require("multer");
-const upload = multer({ dest: "uploads/"});
+const upload = require("../../middlewares/multer");
 
 // https://github.com/mscdex/node-imap
 
