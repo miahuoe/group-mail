@@ -309,6 +309,8 @@ paths:
       responses:
         201:
           description: 'Added'
+        400:
+          description: 'File required'
         401:
           description: 'Unauthorized'
         404:
@@ -741,7 +743,7 @@ components:
           readOnly: true
         subject:
           type: string
-        recipients:
+        to:
           type: array
           items:
             type: string
