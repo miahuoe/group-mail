@@ -107,7 +107,7 @@ const fetchMeta = (conn, which) => {
 		});
 		f.once("end", () => {
 			if (meta.length == 0) {
-				reject("No such message");
+				reject(new HTTPError(404, "No such message"));
 			} else {
 				resolve(meta);
 			}
@@ -230,62 +230,53 @@ const getPart = (conn, directory, uid, partid) => {
 			.then(async (meta) => {
 				meta = meta[0];
 				const part = await fetchPart(cb.conn, uid, partid);
-				if (!part) reject("No such attachment");
+				if (!part) reject(new HTTPError(404, "No such attachment"));
 				const partInfo = parseMailStruct(meta.attrs.struct);
 				const thisPart = partInfo.find(i => i.partID == partid);
 				resolve(Buffer.from(part, thisPart.encoding));
-				// TODO 404?
-			}).catch((e) => reject("No such message"));
+			}).catch((e) => reject(new HTTPError(404, "No such message")));
 		});
 	});
 }
 
 const getMessages = (conn, directory, offset, limit) => {
-	return new Promise((resolve, reject) => {
-		onceReady(conn)
-			.then((conn) => openBox(conn, directory))
-			.then((cb) => {
-				if (cb.box.messages.total == 0) {
-					return undefined;
-				}
-				return fetchMeta(cb.conn, "1:*")
-			}).then((meta) => {
-				if (!meta) {
-					resolve([]);
-					return;
-				}
-				meta.reverse();
-				let mail = [];
-				let begin = offset;
-				let end = offset+limit;
-				if (begin >= meta.length) {
-					begin = meta.length-1;
-				}
-				if (end >= meta.length) {
-					end = meta.length;
-				}
-				for (i = begin; i < end; i++) {
-					const m = meta[i];
-					const parts = parseMailStruct(m.attrs.struct);
-					const att = attachmentsFromParts(parts);
-					//const body = await fetchPart(conn, m.attrs.uid, "1"); // TODO
-					const body = ""; // TODO base64
-					//console.log(m, m.attrs)
-					mail.push({
-						id: m.attrs.uid,
-						subject: m.header.subject?m.header.subject[0]:"",
-						from: m.header.from?m.header.from[0]:"", // TODO
-						to: m.header.to?m.header.to[0]:"", // TODO
-						date: m.header.date?m.header.date[0]:"",
-						//body: body,
-						attachments: att
-					});
-				}
-				resolve(mail);
-			}).catch((err) => {
-				console.log(err); // TODO
+	return onceReady(conn)
+	.then((conn) => openBox(conn, directory))
+	.then((cb) => {
+		if (cb.box.messages.total == 0) {
+			return undefined;
+		}
+		return fetchMeta(cb.conn, "1:*")
+	}).then((meta) => {
+		if (!meta) {
+			return [];
+		}
+		meta.reverse();
+		let mail = [];
+		let begin = offset;
+		let end = offset+limit;
+		if (begin >= meta.length) {
+			begin = meta.length-1;
+		}
+		if (end >= meta.length) {
+			end = meta.length;
+		}
+		for (i = begin; i < end; i++) {
+			const m = meta[i];
+			const parts = parseMailStruct(m.attrs.struct);
+			const att = attachmentsFromParts(parts);
+			//const body = "";
+			mail.push({
+				id: m.attrs.uid,
+				subject: m.header.subject?m.header.subject[0]:"",
+				from: m.header.from?m.header.from[0]:"", // TODO
+				to: m.header.to?m.header.to[0]:"", // TODO
+				date: m.header.date?m.header.date[0]:"",
+				attachments: att
 			});
-	});
+		}
+		return mail;
+	})
 }
 
 const markDeleted = (conn, uids) => {

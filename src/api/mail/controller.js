@@ -8,6 +8,7 @@ const loginGroup = async (group) => {
 	return connect(g.maillocal, g.mailpass);
 };
 
+// TODO need to await the whole thing?
 const getGroup = async (gid) => {
 	const g = await Group.query().findById(gid);
 	if (!g) {
@@ -34,7 +35,7 @@ const getMessages = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = getGroup(req.groupId);
+		const g = await getGroup(req.groupId);
 		const conn = await loginGroup(g);
 		if (v.search) {
 			throw new HTTPError(501, "Not implemented");
