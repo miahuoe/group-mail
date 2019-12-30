@@ -210,6 +210,64 @@ describe("mail & attachments", () => {
 			})
 			.end(done);
 	});
+	it("should delete an attachment", (done) => {
+		request(app)
+			.delete(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(204)
+			.end(done);
+	});
+	it("should get Drafts folder with one message without attachment", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(200)
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
+				res.body.should.have.length(1);
+				res.body[0].should.have.property("id");
+				res.body[0].should.have.property("attachments");
+				res.body[0].attachments.should.be.an.array;
+				res.body[0].attachments.should.be.empty;
+			})
+			.end(done);
+	});
+	it("should 404 when downloading deleted attachment", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(404)
+			.end(done);
+	});
+	it("should delete a message", (done) => {
+		request(app)
+			.delete(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(204)
+			.end(done);
+	});
+	it("should get empty Drafts folder", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(200)
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.be.empty;
+			})
+			.end(done);
+	});
 })
 
 // vim: noai:ts=4:sw=4
