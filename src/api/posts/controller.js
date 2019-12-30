@@ -1,6 +1,7 @@
 const Post = require("./model");
 const Group = require("../groups/model");
 const Joi = require("joi");
+const HTTPError = require("../../lib/HTTPError");
 
 const addPost = async (req, res, next) => {
 	const newPost = {
@@ -19,19 +20,20 @@ const addPost = async (req, res, next) => {
 }
 
 const getPosts = async (req, res, next) => {
-	const schema = Joi.object({
-		offset: Joi.number().integer().min(0).max(1000).default(0),
-		limit: Joi.number().integer().min(5).max(50).default(10),
-	});
-	let v = schema.validate(req.query);
-	if (v.error) {
-		res.status(400).json({error: v.error.details[0].message});
-		return;
-	}
-	v = v.value;
 	try {
+		const schema = Joi.object({
+			offset: Joi.number().integer().min(0).max(1000).default(0),
+			limit: Joi.number().integer().min(5).max(50).default(10),
+		});
+		let v = schema.validate(req.query);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
 		const g = await Group.query().findById(req.groupId);
-		if (!g) throw "g404";
+		if (!g) {
+			throw new HTTPError(404, "No such group");
+		}
 		const p = await g.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
 			.orderBy("created", "desc")
@@ -42,12 +44,8 @@ const getPosts = async (req, res, next) => {
 			delete post.authorId;
 		}
 		res.status(200).json(p);
-	} catch (e) {
-		if (e === "g404") {
-			res.status(404).json({error: "No such group"});
-		} else {
-			res.status(400).json(e); // TODO error
-		}
+	} catch (err) {
+		next(err);
 	}
 }
 
