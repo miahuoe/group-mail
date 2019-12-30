@@ -2,6 +2,7 @@ const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
 const mimemessage = require("mimemessage");
 const fs = require("fs");
+const HTTPError = require("../../lib/HTTPError");
 
 const read = (filepath) => {
 	return fs.readFileSync(filepath, "utf8");
@@ -211,7 +212,7 @@ const addAttachment = (conn, directory, mailId, attachment) => {
 				subject: mc.meta.header.subject
 			};
 			return appendMessage(mc.conn, mail, attachments)
-			.then(() => deleteMessage(mc.conn, [mailId]));
+			.then(() => markDeleted(mc.conn, [mailId]));
 		}).catch(reject)
 		.finally(() => {
 			conn.end();
@@ -232,7 +233,7 @@ const getPart = (conn, directory, uid, partid) => {
 				if (!part) reject("No such attachment");
 				const partInfo = parseMailStruct(meta.attrs.struct);
 				const thisPart = partInfo.find(i => i.partID == partid);
-				resolve(new Buffer(part, thisPart.encoding));
+				resolve(Buffer.from(part, thisPart.encoding));
 				// TODO 404?
 			}).catch((e) => reject("No such message"));
 		});
@@ -287,7 +288,7 @@ const getMessages = (conn, directory, offset, limit) => {
 	});
 }
 
-const deleteMessage = (conn, uids) => {
+const markDeleted = (conn, uids) => {
 	return new Promise((resolve, reject) => {
 		conn.setFlags(uids, "Deleted", (err) => {
 			if (err) {
@@ -305,10 +306,19 @@ const deleteMessage = (conn, uids) => {
 	});
 };
 
+const deleteMessage = (conn, directory, uid) => {
+	return onceReady(conn)
+	.then((conn) => openBox(conn, directory))
+	.then((cb) => markDeleted(conn, [uid]));
+};
+
+const deleteAttachment = (conn, directory, uid, aid) => {
+	return Promise.reject(new HTTPError(501, "Not implemented"));
+};
 
 module.exports = {
 	getPart, getMessages, addMessage, deleteMessage,
-	addAttachment,
+	addAttachment, deleteAttachment
 };
 
 // vim:noai:ts=4:sw=4

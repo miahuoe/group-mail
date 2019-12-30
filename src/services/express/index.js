@@ -4,9 +4,10 @@ const expressConfig = (apiRoot, routes) => {
 	const app = express();
 
 	app.use(express.json());
+
 	app.use(apiRoot, routes);
 
-	app.use((req, res, next) => res.status(404).send({error: 'Routing not found'}));
+	app.use((req, res, next) => res.status(404).send({error: "Routing not found"}));
 
 	return app;
 };
