@@ -95,6 +95,30 @@ describe("/groups", () => {
 			})
 			.expect(200, done);
 	});
+	it("should 404 on /users", (done) => {
+		request(app)
+			.get(`/api/groups/${groups[0].id+69}/users`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect(404)
+			.end(done);
+	});
+	it("should be the only member", (done) => {
+		request(app)
+			.get(`/api/groups/${groups[0].id}/users`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
+				res.body.should.have.length(1);
+				res.body[0].should.have.property("login");
+				res.body[0].login.should.be.equal(login);
+			})
+			.expect(200, done);
+	});
 	it("should get created group posts", (done) => {
 		request(app)
 			.get(`/api/groups/${groups[0].id}/posts`)

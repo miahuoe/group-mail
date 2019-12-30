@@ -1,26 +1,32 @@
 const { Router } = require("express")
 const router = Router()
-const { create, getUsersGroups, invite } = require("./controller")
+const { create, getUsersGroups, invite, leave, kick, getMembers } = require("./controller")
 const posts = require("../posts")
 const mail = require("../mail")
 const token = require("../../middlewares/token")
+
+const withGroupId = (req, res, next) => {
+	// TODO maybe https://expressjs.com/en/4x/api.html#express.router
+	req.groupId = parseInt(req.params.groupId);
+	next();
+};
 
 router.get("/", token, getUsersGroups);
 
 router.post("/", token, create);
 
-//router.get("/:userId/invite", token, invite);
+router.post("/:groupId/users", withGroupId, invite);
 
-// TODO maybe https://expressjs.com/en/4x/api.html#express.router
-router.use("/:groupId/posts", (req, res, next) => {
-	req.groupId = parseInt(req.params.groupId); // TODO
-	next();
-}, posts);
+router.post("/:groupId/leave", withGroupId, leave);
 
-router.use("/:groupId/mail", (req, res, next) => {
-	req.groupId = parseInt(req.params.groupId); // TODO
-	next();
-}, mail);
+router.delete("/:groupId/users/:userId", withGroupId, kick);
+
+router.get("/:groupId/users", withGroupId, getMembers);
+
+
+router.use("/:groupId/posts", withGroupId, posts);
+
+router.use("/:groupId/mail", withGroupId, mail);
 
 module.exports = router;
 

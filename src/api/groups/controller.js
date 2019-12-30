@@ -2,35 +2,43 @@ const Group = require("./model");
 const User = require("../users/model");
 const Joi = require("joi");
 const md5 = require("md5");
+const HTTPError = require("../../lib/HTTPError");
 
 //const { transaction } = require("objection");
+
+const getGroup = async (gid) => {
+	const g = await Group.query().findById(gid);
+	if (!g) {
+		throw new HTTPError(404, "No such group");
+	}
+	return g;
+};
 
 const generatePassword = () => {
 	return Date.now().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
 const create = async (req, res, next) => {
-	const schema = Joi.object({
-		description: Joi.string(),
-		maillocal: Joi.string().alphanum().min(4).max(20).required(),
-		name: Joi.string().alphanum().min(10).max(50).required(),
-	});
-	let v = schema.validate(req.body);
-	if (v.error) {
-		res.status(400).json({error: v.error.details[0].message});
-		return;
-	}
-	v = v.value;
-	const password = generatePassword();
-	const newGroup = {
-		adminId: req.user.id,
-		maillocal: v.maillocal,
-		mailpass: password,
-		mailpassmd5: md5(password),
-		name: v.name,
-		description: v.description
-	};
 	try {
+		const schema = Joi.object({
+			description: Joi.string(),
+			maillocal: Joi.string().alphanum().min(4).max(20).required(),
+			name: Joi.string().alphanum().min(10).max(50).required(),
+		});
+		let v = schema.validate(req.body);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
+		const password = generatePassword();
+		const newGroup = {
+			adminId: req.user.id,
+			maillocal: v.maillocal,
+			mailpass: password,
+			mailpassmd5: md5(password),
+			name: v.name,
+			description: v.description
+		};
 		// TODO transaction?
 		const g = await Group.query().insert(newGroup);
 		const r = await g.$relatedQuery("users").relate(req.user.id);
@@ -48,13 +56,10 @@ const create = async (req, res, next) => {
 			}
 			res.status(409).json({message});
 		} else {
-			res.status(500).json({
-				message: "Other error :(",
-				error: err
-			});
+			next(err);
 		}
 	}
-}
+};
 
 const getUsersGroups = async (req, res, next) => {
 	try {
@@ -65,18 +70,52 @@ const getUsersGroups = async (req, res, next) => {
 		}
 		res.status(200).json(groups);
 	} catch (err) {
-		res.status(404).json({
-			message: err
-		});
+		next(err);
 	}
-}
+};
 
 const invite = (req, res, next) => {
+	try {
+		throw new Error(501);
+		// TODO tests
+	} catch (err) {
+		next(err);
+	}
+};
 
-}
+const leave = (req, res, next) => {
+	try {
+		throw new Error(501);
+		// TODO tests
+	} catch (err) {
+		next(err);
+	}
+};
+
+const kick = (req, res, next) => {
+	try {
+		throw new Error(501);
+		// TODO tests
+	} catch (err) {
+		next(err);
+	}
+};
+
+const getMembers = async (req, res, next) => {
+	try {
+		// TODO tests
+		const g = await getGroup(req.groupId);
+		const members = await g.$relatedQuery("users")
+			.select("id", "login", "email", "joined")
+			.orderBy("joined", "desc");
+		res.status(200).json(members);
+	} catch (err) {
+		next(err);
+	}
+};
 
 module.exports = {
-	create, getUsersGroups, invite,
+	create, getUsersGroups, invite, leave, kick, getMembers
 };
 
 // vim:noai:ts=4:sw=4
