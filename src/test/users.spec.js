@@ -63,7 +63,7 @@ describe("/users", () => {
 		request(app)
 			.post("/api/users/login")
 			.auth(login+"xxxxxD", password)
-			.expect(401, done);
+			.expect(404, done);
 	});
 	it("should not login - incorrect password", (done) => {
 		request(app)
