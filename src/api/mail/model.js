@@ -69,6 +69,18 @@ const openBox = (connection, directory) => {
 	});
 };
 
+const searchIds = (conn, query) => {
+	return new Promise((resolve, reject) => {
+		conn.search(["ALL", ["TEXT", query]], (err, results) => {
+			if (err) {
+				reject(err);
+			} else {
+				resolve(results);
+			}
+		});
+	});
+};
+
 const fetchMeta = (conn, which) => {
 	return new Promise((resolve, reject) => {
 		let meta = [];
@@ -239,14 +251,19 @@ const getPart = (conn, directory, uid, partid) => {
 	});
 }
 
-const getMessages = (conn, directory, offset, limit) => {
+const getMessages = (conn, directory, query, offset, limit) => {
 	return onceReady(conn)
 	.then((conn) => openBox(conn, directory))
-	.then((cb) => {
+	.then(async (cb) => {
 		if (cb.box.messages.total == 0) {
 			return undefined;
 		}
-		return fetchMeta(cb.conn, "1:*")
+		if (query) {
+			const seqs = await searchIds(conn, query);
+			return fetchMeta(cb.conn, seqs);
+		} else {
+			return fetchMeta(cb.conn, "1:*");
+		}
 	}).then((meta) => {
 		if (!meta) {
 			return [];
