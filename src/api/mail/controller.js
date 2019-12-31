@@ -33,14 +33,9 @@ const getMessages = async (req, res, next) => {
 		v = v.value;
 		const g = await getGroup(req.groupId);
 		const conn = await connect(g.maillocal, g.mailpass);
-		if (v.search) {
-			throw new HTTPError(501, "Not implemented");
-			// TODO search
-		} else {
-			const mail = await model.getMessages(conn, v.directory, v.offset, v.limit);
-			conn.end();
-			res.status(200).json(mail);
-		}
+		const mail = await model.getMessages(conn, v.directory, v.search, v.offset, v.limit);
+		conn.end();
+		res.status(200).json(mail);
 	} catch (err) {
 		next(err);
 	}
