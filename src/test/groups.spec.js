@@ -7,9 +7,18 @@ const randomString = () => {
 	return Date.now().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-let login = randomString();
-let password = randomString();
-let email = randomString();
+const numUsers = 10;
+let users = [];
+
+for (i = 0; i < numUsers; i++) {
+	users.push({
+		login: randomString()+i,
+		password: randomString()+i,
+		email: randomString()+i+"@mailmail.com",
+	});
+}
+
+let {login, password, email} = users[0]
 let token = "";
 let group = {
 	name: randomString(),
@@ -27,7 +36,7 @@ describe("/groups", () => {
 		const req = {
 			login: login,
 			password: password,
-			email: email+"@xd.com"
+			email: email,
 		};
 		request(app)
 			.post("/api/users/register")

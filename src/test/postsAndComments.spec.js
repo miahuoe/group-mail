@@ -19,27 +19,27 @@ const group = {
 let groupId = 0;
 
 describe("posts & comments", () => {
-	it("should 401 when not authorized on GET posts", (done) => {
+	it("GET  /api/groups/:id:/posts should 401 when not authorized", (done) => {
 		request(app)
 			.get(`/api/groups/1/posts`)
 			.expect(401, done);
 	});
-	it("should 401 when not authorized on POST posts", (done) => {
+	it("POST /api/groups/:id:/posts should 401 when not authorized", (done) => {
 		request(app)
 			.post(`/api/groups/1/posts`)
 			.expect(401, done);
 	});
-	it("should 401 when not authorized on GET comments", (done) => {
+	it("GET  /api/groups/:id/posts/:id/comments should 401 when not authorized", (done) => {
 		request(app)
 			.get(`/api/groups/1/posts/1/comments`)
 			.expect(401, done);
 	});
-	it("should 401 when not authorized on POST comment", (done) => {
+	it("POST /api/groups/:id/posts/:id/comments should 401 when not authorized", (done) => {
 		request(app)
 			.post(`/api/groups/1/posts/1/comments`)
 			.expect(401, done);
 	});
-	it("should create an user", (done) => {
+	it("POST /api/users/register should create an user", (done) => {
 		const req = {
 			login: login,
 			password: password,
@@ -89,14 +89,18 @@ describe("posts & comments", () => {
 			.expect(401, done);
 	});
 	it("should 404 for inexistent group when posting", (done) => {
+		const post = {
+			body: "hello",
+		};
 		request(app)
 			.post(`/api/groups/${groupId+2}/posts`)
 			.set({
 				Authorization: "Token "+token,
 			})
+			.send(post)
 			.expect(404, done);
 	});
-	it("should get created group posts", (done) => {
+	it("GET  /api/groups/:id/posts should get created group posts", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/posts`)
 			.set({
@@ -108,10 +112,21 @@ describe("posts & comments", () => {
 			})
 			.expect(200, done);
 	});
-
+	it(`POST /api/groups/:id/posts should 400 post without body`, (done) => {
+		const p = {
+		};
+		request(app)
+			.post(`/api/groups/${groupId}/posts`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.send(p)
+			.expect(400)
+			.end(done);
+	});
 	let posts = [];
 	for (i = 0; i < 2; i++) {
-		it(`should post a post ${i}`, (done) => {
+		it(`POST /api/groups/:id/posts should post a valid post`, (done) => {
 			const p = {
 				body: `post body ${i}`,
 			};
@@ -129,21 +144,38 @@ describe("posts & comments", () => {
 				.expect(201, done);
 		});
 	}
-	it("should 404 for inexistent post when getting", (done) => {
+	it("GET  /api/groups/:id/posts/:id/comments should 404 for inexistent post when getting", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/posts/${posts[1]+2}/comments`)
 			.set({
 				Authorization: "Token "+token,
 			})
-			.expect(404, done);
+			.expect(404)
+			.end(done);
 	});
-	it("should 404 for inexistent post when posting", (done) => {
+	it("POST /api/groups/:id/posts/:id/comments should 400 for invalid comment", (done) => {
+		const c = {
+		};
+		request(app)
+			.post(`/api/groups/${groupId}/posts/${posts[1]}/comments`)
+			.set({
+				Authorization: "Token "+token,
+			})
+			.send(c)
+			.expect(400, done);
+	});
+	it("POST /api/groups/:id/posts/:id/comments should 404 for inexistent post", (done) => {
+		const c = {
+			body: "hello",
+		};
 		request(app)
 			.post(`/api/groups/${groupId}/posts/${posts[1]+2}/comments`)
 			.set({
 				Authorization: "Token "+token,
 			})
-			.expect(404, done);
+			.send(c)
+			.expect(404)
+			.end(done);
 	});
 	it(`should get posts`, (done) => {
 		request(app)
