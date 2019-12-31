@@ -3,9 +3,9 @@ const { passwordHash } = require("../../services/bcrypt");
 const { limits } = require("../../config");
 const User = require("./model");
 const Joi = require("joi");
+const HTTPError = require("../../lib/HTTPError");
 
-const register = (req, res, next) => {
-	/* TODO Maybe register should be similar to login? BasicAuth? */
+const register = async (req, res, next) => {
 	const schema = Joi.object({
 		login: Joi.string().alphanum()
 			.min(limits.login.minLength)
@@ -18,36 +18,31 @@ const register = (req, res, next) => {
 			.min(limits.password.minLength)
 			.max(limits.password.maxLength).required(),
 	});
-	const v = schema.validate(req.body);
-	if (v.error) {
-		res.status(400).json({error: v.error.details[0].message});
-		return;
-	}
-	const hashedPassword = passwordHash(v.value.password);
-	User.query().insert({
-		login: v.value.login,
-		email: v.value.email,
-		password: hashedPassword
-	}).then((result) => {
-		res.status(201).json({
-			message: "Registered"
+	try {
+		const v = schema.validate(req.body);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		const hashedPassword = passwordHash(v.value.password);
+		const u = await User.query().insert({
+			login: v.value.login,
+			email: v.value.email,
+			password: hashedPassword
 		});
-	}).catch((err) => {
-		if (err.code == "ER_DUP_ENTRY") {
+		res.status(201).json({ message: "Registered" });
+	} catch (err) {
+		if (err.code && err.code == "ER_DUP_ENTRY") {
 			let message = ""
 			if (err.sqlMessage.indexOf("login") != -1) {
 				message = "Login occupied"
 			} else if (err.sqlMessage.indexOf("email") != -1) {
 				message = "Email already used"
 			}
-			res.status(409).json({error: message});
+			next(new HTTPError(409, message));
 		} else {
-			console.error(err);
-			res.status(500).json({
-				error: "Other error :(",
-			});
+			next(err);
 		}
-	});
+	}
 };
 
 const login = (req, res, next) => {
