@@ -4,10 +4,6 @@ const { connect } = require("../../services/imap");
 const Joi = require("joi");
 const HTTPError = require("../../lib/HTTPError");
 
-const loginGroup = async (group) => {
-	return connect(g.maillocal, g.mailpass);
-};
-
 // TODO need to await the whole thing?
 const getGroup = async (gid) => {
 	const g = await Group.query().findById(gid);
@@ -36,7 +32,7 @@ const getMessages = async (req, res, next) => {
 		}
 		v = v.value;
 		const g = await getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const conn = await connect(g.maillocal, g.mailpass);
 		if (v.search) {
 			throw new HTTPError(501, "Not implemented");
 			// TODO search
@@ -65,8 +61,8 @@ const getMessage = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const g = await getGroup(req.groupId);
+		const conn = await connect(g.maillocal, g.mailpass);
 		//const mail = await model.getMessages(conn, v.directory, v.messageId);
 		if (!mail || mail.length == 0) {
 			throw new HTTPError(404, "No such message");
@@ -92,8 +88,8 @@ const deleteMessage = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const g = await getGroup(req.groupId);
+		const conn = await connect(g.maillocal, g.mailpass);
 		await model.deleteMessage(conn, v.directory, v.messageId);
 		conn.end();
 		res.sendStatus(204);
@@ -123,8 +119,8 @@ const addMessage = async (req, res, next) => {
 		if (v.directory != "Drafts") {
 			throw new HTTPError(400, "Cannot create mail there");
 		}
-		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const g = await getGroup(req.groupId);
+		const conn = await connect(g.maillocal, g.mailpass);
 		const mail = await model.addMessage(conn, v.directory, {
 			subject: v.subject,
 			body: v.body,
@@ -161,8 +157,8 @@ const getAttachment = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const g = await getGroup(req.groupId);
+		const conn = await connect(g.maillocal, g.mailpass);
 		const atta = await model.getPart(conn, v.directory, v.messageId, v.attachmentId);
 		conn.end();
 		res.set("Content-Type", "application/octet-stream");
@@ -189,8 +185,8 @@ const addAttachment = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const g = await getGroup(req.groupId);
+		const conn = await connect(g.maillocal, g.mailpass);
 		await model.addAttachment(conn, v.directory, v.messageId, req.file);
 		conn.end();
 		res.sendStatus(201);
@@ -216,7 +212,7 @@ const deleteAttachment = async (req, res, next) => {
 		}
 		v = v.value;
 		const g = getGroup(req.groupId);
-		const conn = await loginGroup(g);
+		const conn = await connect(g.maillocal, g.mailpass);
 		await model.deleteAttachment(conn, v.directory, v.messageId, v.attachmentId);
 		conn.end();
 		res.sendStatus(204);
