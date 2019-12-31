@@ -1,21 +1,42 @@
 const Post = require("./model");
+const User = require("../users/model");
 const Group = require("../groups/model");
 const Joi = require("joi");
 const HTTPError = require("../../lib/HTTPError");
 
+const belongsToGroup = async (uid, gid) => {
+	const g = await Group.query().findById(gid);
+	if (!g) {
+		throw new HTTPError(404, "No such group");
+	}
+	return g.$relatedQuery("users").select("id").where("id", uid);
+};
+
 const addPost = async (req, res, next) => {
-	const newPost = {
-		groupId: req.groupId,
-		authorId: req.user.id,
-		body: req.body.body,
-	};
 	try {
+		const u = await belongsToGroup(req.user.id, req.groupId);
+		if (!u) {
+			throw new HTTPError(401, "Not in group");
+		}
+		const schema = Joi.object({
+			body: Joi.string().required(),
+		});
+		let v = schema.validate(req.body);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
+		const newPost = {
+			groupId: req.groupId,
+			authorId: req.user.id,
+			body: v.body,
+		};
 		const p = await Post.query().insert(newPost);
 		// TODO missing creation date
 		delete p.groupId;
 		res.status(201).json(p);
-	} catch (e) {
-		res.status(400).json(e); // TODO error
+	} catch (err) {
+		next(err);
 	}
 }
 
@@ -36,6 +57,7 @@ const getPosts = async (req, res, next) => {
 		}
 		const p = await g.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
+			.orderBy("id", "asc")
 			.orderBy("created", "desc")
 			.limit(v.limit)
 			.offset(v.offset);
