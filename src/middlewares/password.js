@@ -11,7 +11,7 @@ const password = (req, res, next) => {
 	const [login, password] = Buffer.from(b64auth, "base64").toString("ascii").split(":");
 	User.query().findOne({ login }).then((user) => {
 		if (!user) {
-			return res.sendStatus(401); // NOTE 404 would suggest that user exists
+			return res.sendStatus(404);
 		}
 		return user.authenticate(password).then((user) => {
 			if (!user) {
