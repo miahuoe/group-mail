@@ -5,8 +5,6 @@ const { getMessage, getMessages, deleteMessage, addMessage, updateMessage,
 const token = require("../../middlewares/token");
 const upload = require("../../middlewares/multer");
 
-// https://github.com/mscdex/node-imap
-
 router.get("/:directory", token, getMessages);
 router.post("/:directory", token, addMessage);
 
