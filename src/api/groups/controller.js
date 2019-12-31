@@ -14,17 +14,25 @@ const getGroup = async (gid) => {
 	return g;
 };
 
+const getUser = async (uid) => {
+	const u = await User.query().findById(uid);
+	if (!u) {
+		throw new HTTPError(404, "No such user");
+	}
+	return u;
+};
+
 const generatePassword = () => {
 	return Date.now().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
 const create = async (req, res, next) => {
+	const schema = Joi.object({
+		description: Joi.string(),
+		maillocal: Joi.string().alphanum().min(4).max(20).required(),
+		name: Joi.string().alphanum().min(10).max(50).required(),
+	});
 	try {
-		const schema = Joi.object({
-			description: Joi.string(),
-			maillocal: Joi.string().alphanum().min(4).max(20).required(),
-			name: Joi.string().alphanum().min(10).max(50).required(),
-		});
 		let v = schema.validate(req.body);
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
@@ -74,19 +82,38 @@ const getUsersGroups = async (req, res, next) => {
 	}
 };
 
-const invite = (req, res, next) => {
+const invite = async (req, res, next) => {
+	const schema = Joi.object({
+		email: Joi.string().email({
+			minDomainSegments: 2, // something.com
+			tlds: { allow: ["com"] }
+		}).required(),
+	});
 	try {
-		throw new Error(501);
-		// TODO tests
+		let v = schema.validate(req.query);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
+		const g = await getGroup(req.params.groupId);
+		const u = await User.query().findOne({
+			email: v.email,
+		});
+		if (!u) {
+			throw new HTTPError(404, "No such user");
+		}
+		const r = await g.$relatedQuery("users").relate(u.id);
+		res.status(201).json({message: "Invited"});
 	} catch (err) {
 		next(err);
 	}
 };
 
-const leave = (req, res, next) => {
+const leave = async (req, res, next) => {
 	try {
-		throw new Error(501);
-		// TODO tests
+		const g = await getGroup(req.params.groupId);
+		const r = await g.$relatedQuery("users").unrelate(req.user.id);
+		res.status(204).json({message: "Left"});
 	} catch (err) {
 		next(err);
 	}
@@ -95,7 +122,6 @@ const leave = (req, res, next) => {
 const kick = (req, res, next) => {
 	try {
 		throw new Error(501);
-		// TODO tests
 	} catch (err) {
 		next(err);
 	}
@@ -103,8 +129,7 @@ const kick = (req, res, next) => {
 
 const getMembers = async (req, res, next) => {
 	try {
-		// TODO tests
-		const g = await getGroup(req.groupId);
+		const g = await getGroup(req.params.groupId);
 		const members = await g.$relatedQuery("users")
 			.select("id", "login", "email", "joined")
 			.orderBy("joined", "desc");
