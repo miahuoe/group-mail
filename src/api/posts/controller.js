@@ -9,7 +9,8 @@ const belongsToGroup = async (uid, gid) => {
 	if (!g) {
 		throw new HTTPError(404, "No such group");
 	}
-	return g.$relatedQuery("users").select("id").where("id", uid);
+	const u = await g.$relatedQuery("users").select("id").where("id", uid);
+	return u && u.length === 1 && u[0].id == uid;
 };
 
 const addPost = async (req, res, next) => {
@@ -42,6 +43,10 @@ const addPost = async (req, res, next) => {
 
 const getPosts = async (req, res, next) => {
 	try {
+		const u = await belongsToGroup(req.user.id, req.groupId);
+		if (!u) {
+			throw new HTTPError(401, "Not in group");
+		}
 		const schema = Joi.object({
 			offset: Joi.number().integer().min(0).max(1000).default(0),
 			limit: Joi.number().integer().min(5).max(50).default(10),
@@ -57,7 +62,7 @@ const getPosts = async (req, res, next) => {
 		}
 		const p = await g.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
-			.orderBy("id", "asc")
+			.orderBy("id", "desc")
 			.orderBy("created", "desc")
 			.limit(v.limit)
 			.offset(v.offset);
