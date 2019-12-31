@@ -60,6 +60,7 @@ const getComments = async (req, res, next) => {
 		const p = await g.$relatedQuery("posts").findById(req.postId);
 		if (!p) throw new HTTPError(404, "No such post");
 		const c = await p.$relatedQuery("comments")
+			.orderBy("id", "desc")
 			.orderBy("created", "desc")
 			.limit(v.limit)
 			.offset(v.offset);
