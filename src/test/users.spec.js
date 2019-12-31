@@ -15,7 +15,7 @@ const email = randomString();
 
 describe("/users", () => {
 	// TODO drop database
-	it("should reject too short login", (done) => {
+	it("POST /api/users/register should reject too short login", (done) => {
 		const req = {
 			login: "m",
 			password: "xd",
@@ -26,7 +26,7 @@ describe("/users", () => {
 			.send(req)
 			.expect(400, done);
 	});
-	it("should reject too short password", (done) => {
+	it("POST /api/users/register should reject too short password", (done) => {
 		const req = {
 			login: "miahuoe",
 			password: "xd",
@@ -37,7 +37,7 @@ describe("/users", () => {
 			.send(req)
 			.expect(400, done);
 	});
-	it("should reject incorrect email", (done) => {
+	it("POST /api/users/register should reject incorrect email", (done) => {
 		const req = {
 			login: "miahuoe",
 			password: "xd",
@@ -48,7 +48,7 @@ describe("/users", () => {
 			.send(req)
 			.expect(400, done);
 	});
-	it("should create an user", (done) => {
+	it("POST /api/users/register should create an user", (done) => {
 		const req = {
 			login: login,
 			password: password,
@@ -59,19 +59,19 @@ describe("/users", () => {
 			.send(req)
 			.expect(201, done);
 	});
-	it("should not login - incorrect login", (done) => {
+	it("POST /api/users/login should 404 on non-existing user login", (done) => {
 		request(app)
 			.post("/api/users/login")
 			.auth(login+"xxxxxD", password)
 			.expect(404, done);
 	});
-	it("should not login - incorrect password", (done) => {
+	it("POST /api/users/login should 401 on incorrect password", (done) => {
 		request(app)
 			.post("/api/users/login")
 			.auth(login, password+"xDDD")
 			.expect(401, done);
 	});
-	it("should login", (done) => {
+	it("POST /api/users/login should login", (done) => {
 		request(app)
 			.post("/api/users/login")
 			.auth(login, password)
