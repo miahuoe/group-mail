@@ -8,66 +8,53 @@ const randomString = () => {
 	return Date.now().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-const login = randomString();
-const password = randomString();
-const email = randomString();
-let token = "";
+const user = {
+	login: randomString(),
+	password: randomString(),
+	email: randomString()+"@lolmail.com",
+};
+
 const group = {
 	name: randomString(),
 	maillocal: randomString(),
 	description: randomString()
 };
-let groupId = 0;
-let mailId = 0;
-let attId = 0;
+
 const filePath = "doc.yaml";
 
 describe("mail & attachments", () => {
-	it("should create an user", (done) => {
-		const req = {
-			login: login,
-			password: password,
-			email: email+"@xd.com"
-		};
-		request(app)
+	let token = "";
+	let groupId = 0;
+	let mailId = 0;
+	let attId = 0;
+	before(async (done) => {
+		await request(app)
 			.post("/api/users/register")
-			.send(req)
-			.expect(201)
-			.end(done);
-	});
-	it("should login", (done) => {
-		request(app)
+			.send(user)
+			.expect(201);
+		await request(app)
 			.post("/api/users/login")
-			.auth(login, password)
+			.auth(user.login, user.password)
 			.expect(200)
-			.expect("Content-Type", "application/json; charset=utf-8")
 			.expect((res) => {
 				res.body.should.have.property("token");
 				token = res.body.token;
-			})
-			.end(done);
-	});
-	it("should create a new group", (done) => {
-		request(app)
+			});
+		await request(app)
 			.post("/api/groups")
-			.set({
-				Authorization: "Token "+token,
-				"Content-Type": "application/json",
-			})
+			.set({ Authorization: "Token "+token })
 			.send(group)
 			.expect(201)
 			.expect((res) => {
 				res.body.should.have.property("id");
 				groupId = res.body.id;
 			})
-			.end(done);
+		done();
 	});
 	it("should get empty Drafts folder", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
@@ -82,9 +69,7 @@ describe("mail & attachments", () => {
 		};
 		request(app)
 			.post(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.send(mail)
 			.expect(400)
 			.end(done);
@@ -96,9 +81,7 @@ describe("mail & attachments", () => {
 		};
 		request(app)
 			.post(`/api/groups/${groupId}/mail/Sent`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.send(mail)
 			.expect(400)
 			.end(done);
@@ -111,9 +94,7 @@ describe("mail & attachments", () => {
 		};
 		request(app)
 			.post(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.send(mail)
 			.expect(201)
 			.expect((res) => {
@@ -127,9 +108,7 @@ describe("mail & attachments", () => {
 	it("should get Drafts folder with one message", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
@@ -143,6 +122,25 @@ describe("mail & attachments", () => {
 			})
 			.end(done);
 	});
+	it("should find message", (done) => {
+		request(app)
+			.get(`/api/groups/${groupId}/mail/Drafts`)
+			.set({ Authorization: "Token "+token })
+			.query({ search: "hello" })
+			.expect(200)
+			.expect((res) => {
+				res.body.should.be.an.array;
+				res.body.should.not.be.empty;
+				res.body.should.have.length(1);
+				res.body[0].should.have.property("id");
+				res.body[0].id.should.be.equal(mailId);
+				res.body[0].should.have.property("attachments");
+				res.body[0].attachments.should.be.an.array;
+				res.body[0].attachments.should.be.empty;
+				// TODO check body
+			})
+			.end(done);
+	});
 	it("should update mail", (done) => {
 		const mail = {
 			subject: "wassup?",
@@ -151,9 +149,7 @@ describe("mail & attachments", () => {
 		};
 		request(app)
 			.put(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.send(mail)
 			.expect(201)
 			.expect((res) => {
@@ -165,9 +161,7 @@ describe("mail & attachments", () => {
 	it("should post an attachment", (done) => {
 		request(app)
 			.post(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.attach("file", filePath, { contentType: "application/octet-stream" })
 			.expect(201)
 			.end(done);
@@ -175,9 +169,7 @@ describe("mail & attachments", () => {
 	it("should get Drafts folder with one message with one attachment", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
@@ -198,9 +190,7 @@ describe("mail & attachments", () => {
 	it("should download an attachment", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect("Content-Type", "application/octet-stream")
 			.expect((res) => {
@@ -213,18 +203,14 @@ describe("mail & attachments", () => {
 	it("should delete an attachment", (done) => {
 		request(app)
 			.delete(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(204)
 			.end(done);
 	});
 	it("should get Drafts folder with one message without attachment", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
@@ -240,9 +226,7 @@ describe("mail & attachments", () => {
 	it("should 404 when downloading deleted attachment", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(404)
 			.end(done);
 	});
@@ -258,9 +242,7 @@ describe("mail & attachments", () => {
 	it("should get empty Drafts folder", (done) => {
 		request(app)
 			.get(`/api/groups/${groupId}/mail/Drafts`)
-			.set({
-				Authorization: "Token "+token,
-			})
+			.set({ Authorization: "Token "+token })
 			.expect(200)
 			.expect((res) => {
 				res.body.should.be.an.array;
