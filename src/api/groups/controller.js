@@ -105,13 +105,20 @@ const invite = async (req, res, next) => {
 		const r = await g.$relatedQuery("users").relate(u.id);
 		res.status(201).json({message: "Invited"});
 	} catch (err) {
-		next(err);
+		if (err.code && err.code === "ER_DUP_ENTRY") {
+			next(new HTTPError(400, "User already in group"));
+		} else {
+			next(err);
+		}
 	}
 };
 
 const leave = async (req, res, next) => {
 	try {
 		const g = await getGroup(req.params.groupId);
+		if (g.adminId == req.user.id) {
+			throw new HTTPError(400, "Group admin cannot leave group");
+		}
 		const r = await g.$relatedQuery("users").unrelate(req.user.id);
 		res.status(204).json({message: "Left"});
 	} catch (err) {
@@ -121,7 +128,7 @@ const leave = async (req, res, next) => {
 
 const kick = (req, res, next) => {
 	try {
-		throw new Error(501);
+		throw new HTTPError(501);
 	} catch (err) {
 		next(err);
 	}
