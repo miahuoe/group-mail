@@ -2,7 +2,7 @@ const Post = require("./model");
 const User = require("../users/model");
 const Group = require("../groups/model");
 const Joi = require("joi");
-const HTTPError = require("../../lib/HTTPError");
+const { HTTPError } = require("../../lib/HTTPError");
 
 const belongsToGroup = async (uid, gid) => {
 	const g = await Group.query().findById(gid);

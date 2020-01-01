@@ -3,7 +3,7 @@ const { passwordHash } = require("../../services/bcrypt");
 const { limits } = require("../../config");
 const User = require("./model");
 const Joi = require("joi");
-const HTTPError = require("../../lib/HTTPError");
+const { HTTPError } = require("../../lib/HTTPError");
 
 const register = async (req, res, next) => {
 	const schema = Joi.object({

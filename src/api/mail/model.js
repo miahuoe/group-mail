@@ -2,11 +2,7 @@ const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
 const mimemessage = require("mimemessage");
 const fs = require("fs");
-const HTTPError = require("../../lib/HTTPError");
-
-const read = (filepath) => {
-	return fs.readFileSync(filepath, "utf8");
-};
+const { HTTPError } = require("../../lib/HTTPError");
 
 const parseMailStruct = (struct, parts) => {
 	parts = parts || [];

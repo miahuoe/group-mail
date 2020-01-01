@@ -2,7 +2,7 @@ const Group = require("../groups/model");
 const model = require("./model");
 const { connect } = require("../../services/imap");
 const Joi = require("joi");
-const HTTPError = require("../../lib/HTTPError");
+const { HTTPError } = require("../../lib/HTTPError");
 
 // TODO need to await the whole thing?
 const getGroup = async (gid) => {
