@@ -1,3 +1,4 @@
+//"use strict"; // TODO
 const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
 const mimemessage = require("mimemessage");
@@ -5,6 +6,16 @@ const fs = require("fs");
 const { HTTPError } = require("../../lib/HTTPError");
 
 // TODO closeBox(cb())
+
+const attachmentFromBuffer = (buffer, name) => {
+	let att = mimemessage.factory({
+		contentType: "application/octet-stream",
+		contentTransferEncoding: "base64",
+		body: buffer.toString("base64"),
+	});
+	att.header("Content-Disposition", `ATTACHMENT ;filename=\"${name}\"`);
+	return att;
+};
 
 const parseMailStruct = (struct, parts) => {
 	parts = parts || [];
@@ -26,7 +37,7 @@ const attachmentsFromParts = (parts) => {
 	for (p of parts) {
 		if (p.disposition && ["INLINE", "ATTACHMENT"].includes(p.disposition.type)) {
 			let a = {
-				id: p.partID,
+				id: parseInt(p.partID),
 				name: "",
 				size: p.size
 			};
@@ -41,19 +52,54 @@ const attachmentsFromParts = (parts) => {
 	return att;
 };
 
-const onceReady = (connection) => {
+const mailPrototypeToMimeMessage = (mail) => {
+	const msg = mimemessage.factory({
+		contentType: "multipart/alternate",
+		body: []
+	});
+	if (!Array.isArray(mail.to)) {
+		mail.to = [mail.to];
+	}
+	mail.date = (new Date()).toISOString();
+	msg.header("To", mail.to.join(", "));
+	msg.header("From", mail.from);
+	msg.header("Date", mail.date); // TODO
+	msg.header("Subject", mail.subject);
+	if (mail.body) {
+		const plainEntity = mimemessage.factory({
+			body: mail.body
+		});
+		msg.body.push(plainEntity);
+	}
+	return msg;
+};
+
+const metaToMailPrototype = (meta) => {
+	const parts = parseMailStruct(meta.attrs.struct);
+	const att = attachmentsFromParts(parts);
+	return {
+		id: meta.attrs.uid,
+		subject: meta.header.subject?meta.header.subject[0]:"",
+		from: meta.header.from?meta.header.from[0]:"", // TODO
+		to: meta.header.to?meta.header.to[0]:"", // TODO
+		date: meta.header.date?meta.header.date[0]:"",
+		attachments: att
+	};
+};
+
+const onceReady = (conn) => {
 	return new Promise((resolve, reject) => {
-		connection.once("ready", () => {
-			resolve(connection);
+		conn.once("ready", () => {
+			resolve(conn);
 		});
-		connection.once("error", (err) => {
-			reject(err);
+		conn.once("error", (err) => {
 			conn.end();
+			reject(err);
 		});
-		connection.once("end", () => {
+		conn.once("end", () => {
 			//console.log("IMAP end");
 		});
-		connection.connect();
+		conn.connect();
 	});
 };
 
@@ -142,6 +188,10 @@ const fetchPart = (conn, uid, partID) => {
 		});
 		f.on("message", (msg, seqno) => {
 			msg.on("body", (stream, info) => {
+				if (info.size == 0) {
+					resolve(undefined); // TODO add checks
+					return;
+				}
 				let buffer = "";
 				stream.once("end", () => {
 					resolve(buffer);
@@ -164,36 +214,10 @@ const fetchPart = (conn, uid, partID) => {
 	});
 };
 
-const appendMessage = (conn, mail, attachments) => {
+const newMessage = (conn, mail) => {
 	return new Promise((resolve, reject) => {
-		const msg = mimemessage.factory({
-			contentType: "multipart/alternate",
-			body: []
-		});
-		if (!Array.isArray(mail.to)) {
-			mail.to = [mail.to]
-		}
-		mail.created = (new Date()).toISOString();
-		msg.header("To", mail.to.join(", "));
-		msg.header("From", mail.from);
-		msg.header("Date", mail.created); // TODO
-		msg.header("Subject", mail.subject);
-		const plainEntity = mimemessage.factory({
-			body: mail.body
-		});
-		msg.body.push(plainEntity);
-		for (a of attachments) {
-			const att = mimemessage.factory({
-				contentType: "application/octet-stream",
-				contentTransferEncoding: "base64",
-				body: a.buffer.toString("base64"),
-			});
-			att.header("Content-Disposition", `ATTACHMENT ;filename=\"${a.originalname}\"`);
-			msg.body.push(att);
-		}
-		const options = {
-			//mailbox: directory,
-		};
+		let msg = mailPrototypeToMimeMessage(mail);
+		const options = {};
 		conn.append(msg.toString(), options, async (err) => {
 			if (err) {
 				reject(err);
@@ -202,6 +226,7 @@ const appendMessage = (conn, mail, attachments) => {
 					"RECENT",
 					["HEADER", "SUBJECT", mail.subject],
 					["HEADER", "FROM", mail.from]
+					// TODO
 				]);
 				if (ids && ids.length == 1) {
 					mail.id = ids[0];
@@ -216,9 +241,52 @@ const appendMessage = (conn, mail, attachments) => {
 	});
 };
 
-const addMessage = async (conn, directory, mail, attachments) => {
+const cloneMessage = (conn, uid, mail, newAtt, excludeAttachments = []) => {
+	return new Promise(async (resolve, reject) => {
+		let msg = mailPrototypeToMimeMessage(mail);
+		if (newAtt) {
+			msg.body.push(attachmentFromBuffer(newAtt.buffer, newAtt.originalname));
+		}
+		const meta = await fetchMeta(conn, uid);
+		const parts = parseMailStruct(meta[0].attrs.struct);
+		for (a of attachmentsFromParts(parts)) {
+			if (excludeAttachments.includes(a.id)) {
+				continue;
+			}
+			const buffer = await fetchPart(conn, uid, a.id);
+			if (buffer) {
+				msg.body.push(attachmentFromBuffer(buffer, a.name));
+			}
+		}
+		const options = {};
+		conn.append(msg.toString(), options, async (err) => {
+			if (err) {
+				reject(err);
+			} else {
+				const ids = await search(conn, [
+					"RECENT",
+					["HEADER", "SUBJECT", mail.subject],
+					["HEADER", "FROM", mail.from]
+					// TODO
+				]);
+				if (ids && ids.length == 1) {
+					mail.id = ids[0];
+				} else {
+					console.warn("did not find an id");
+					// TODO
+				}
+				const meta = await fetchMeta(conn, mail.id);
+				const parts = parseMailStruct(meta[0].attrs.struct);
+				mail.attachments = attachmentsFromParts(parts);
+				resolve(mail);
+			}
+		});
+	});
+};
+
+const addMessage = async (conn, directory, mail, newAttachments) => {
 	const box = await openBox(conn, directory);
-	return appendMessage(conn, mail, attachments).finally(() => {
+	return newMessage(conn, mail).finally(() => {
 		conn.closeBox((err) => {}); // TODO
 		conn.end();
 	});
@@ -226,9 +294,10 @@ const addMessage = async (conn, directory, mail, attachments) => {
 
 const updateMessage = async (conn, directory, mailId, mail) => {
 	const box = await openBox(conn, directory);
-	return appendMessage(conn, mail, [])
+	// TODO body?
+	return cloneMessage(conn, mailId, mail)
 	.then(async (msg) => {
-		await markDeleted(conn, [mailId]);
+		await markDeleted(conn, [mailId])
 		return msg;
 	}).finally(() => {
 		conn.closeBox((err) => {}); // TODO
@@ -236,21 +305,24 @@ const updateMessage = async (conn, directory, mailId, mail) => {
 	});
 };
 
-const addAttachment = async (conn, directory, mailId, attachment) => {
+const addAttachment = async (conn, directory, mailId, newAttachment) => {
 	const box = await openBox(conn, directory);
-	let meta = await fetchMeta(conn, ""+mailId);
+	let meta = await fetchMeta(conn, mailId);
 	meta = meta[0];
-	const parts = parseMailStruct(meta.attrs.struct);
-	const att = attachmentsFromParts(parts);
-	let attachments = [attachment];
+	//const parts = parseMailStruct(meta[0].attrs.struct);
+	//const att = attachmentsFromParts(parts);
+	const body = await fetchPart(conn, mailId, 1);
 	const mail = {
 		from: meta.header.from,
 		to: meta.header.to,
-		subject: meta.header.subject
+		subject: meta.header.subject,
+		body: body ? body.toString() : undefined,
 	};
-	return appendMessage(conn, mail, attachments)
-	.then(() => markDeleted(conn, [mailId]))
-	.finally(() => {
+	return cloneMessage(conn, mailId, mail, newAttachment)
+	.then(async (msg) => {
+		await markDeleted(conn, [mailId])
+		return msg;
+	}).finally(() => {
 		conn.closeBox(() => {});
 		conn.end();
 	});
@@ -261,14 +333,15 @@ const getPart = (conn, directory, uid, partid) => {
 		const box = await openBox(conn, directory);
 		fetchMeta(conn, uid).then(async (meta) => {
 			if (!meta || meta.length == 0) {
-				throw new HTTPError(404, "No such message")
+				reject(new HTTPError(404, "No such message"));
+				return;
 			}
 			meta = meta[0];
 			const partInfo = parseMailStruct(meta.attrs.struct);
 			const part = await fetchPart(conn, uid, partid);
 			const thisPart = partInfo.find(i => i.partID == partid);
 			if (!part) {
-				throw new HTTPError(404, "No such attachment");
+				reject(new HTTPError(404, "No such attachment"));
 			} else if (thisPart.encoding === "7bit") {
 				resolve(Buffer.from(part, "ascii"));
 			} else {
@@ -301,17 +374,7 @@ const getMessages = async (conn, directory, query, offset, limit) => {
 			end = meta.length;
 		}
 		for (i = begin; i < end; i++) {
-			const m = meta[i];
-			const parts = parseMailStruct(m.attrs.struct);
-			const att = attachmentsFromParts(parts);
-			mail.push({
-				id: m.attrs.uid,
-				subject: m.header.subject?m.header.subject[0]:"",
-				from: m.header.from?m.header.from[0]:"", // TODO
-				to: m.header.to?m.header.to[0]:"", // TODO
-				date: m.header.date?m.header.date[0]:"",
-				attachments: att
-			});
+			mail.push(metaToMailPrototype(meta[i]));
 		}
 		return mail;
 	}).finally(() => {
@@ -346,8 +409,20 @@ const deleteMessage = async (conn, directory, uid) => {
 	});
 };
 
-const deleteAttachment = (conn, directory, uid, aid) => {
-	return Promise.reject(new HTTPError(501, "Not implemented"));
+const deleteAttachment = async (conn, directory, uid, aid) => {
+	const box = await openBox(conn, directory);
+	const meta = await fetchMeta(conn, uid);
+	let msg = metaToMailPrototype(meta[0]);
+	const body = await fetchPart(conn, uid, 1);
+	msg.body = body.toString(); // TODO encoding
+	return cloneMessage(conn, uid, msg, undefined, [aid])
+	.then(async (msg) => {
+		await markDeleted(conn, [uid]);
+		return msg;
+	}).finally(() => {
+		conn.closeBox((err) => {}); // TODO
+		conn.end();
+	});
 };
 
 module.exports = {
