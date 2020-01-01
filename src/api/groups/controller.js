@@ -2,7 +2,7 @@ const Group = require("./model");
 const User = require("../users/model");
 const Joi = require("joi");
 const md5 = require("md5");
-const HTTPError = require("../../lib/HTTPError");
+const { HTTPError } = require("../../lib/HTTPError");
 
 //const { transaction } = require("objection");
 
@@ -88,14 +88,18 @@ const invite = async (req, res, next) => {
 			minDomainSegments: 2, // something.com
 			tlds: { allow: ["com"] }
 		}).required(),
+		groupId: Joi.number().integer().required(),
 	});
 	try {
-		let v = schema.validate(req.query);
+		let v = schema.validate({
+			email: req.query.email,
+			groupId: req.params.groupId,
+		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(req.params.groupId);
+		const g = await getGroup(v.groupId);
 		const u = await User.query().findOne({
 			email: v.email,
 		});
@@ -114,21 +118,51 @@ const invite = async (req, res, next) => {
 };
 
 const leave = async (req, res, next) => {
+	const schema = Joi.object({
+		groupId: Joi.number().integer().required(),
+	});
 	try {
-		const g = await getGroup(req.params.groupId);
+		let v = schema.validate({
+			groupId: req.params.groupId,
+		});
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
+		const g = await getGroup(v.groupId);
 		if (g.adminId == req.user.id) {
 			throw new HTTPError(400, "Group admin cannot leave group");
 		}
-		const r = await g.$relatedQuery("users").unrelate(req.user.id);
+		const r = await g.$relatedQuery("users").unrelate().where("id", req.user.id);
 		res.status(204).json({message: "Left"});
 	} catch (err) {
 		next(err);
 	}
 };
 
-const kick = (req, res, next) => {
+const kick = async (req, res, next) => {
+	const schema = Joi.object({
+		groupId: Joi.number().integer().required(),
+		userId: Joi.number().integer().required(),
+	});
 	try {
-		throw new HTTPError(501);
+		let v = schema.validate({
+			groupId: req.params.groupId,
+			userId: req.params.userId,
+		});
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		v = v.value;
+		const g = await getGroup(v.groupId);
+		if (g.adminId != req.user.id) {
+			throw new HTTPError(401, "Only group admin can kick");
+		}
+		if (g.adminId == v.userId) {
+			throw new HTTPError(400, "Group admin cannot be kicked out of group");
+		}
+		const r = await g.$relatedQuery("users").unrelate().where("id", req.user.id);
+		res.status(204).json({message: "Kicked"});
 	} catch (err) {
 		next(err);
 	}
