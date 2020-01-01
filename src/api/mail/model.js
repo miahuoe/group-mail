@@ -4,6 +4,8 @@ const mimemessage = require("mimemessage");
 const fs = require("fs");
 const { HTTPError } = require("../../lib/HTTPError");
 
+// TODO closeBox(cb())
+
 const parseMailStruct = (struct, parts) => {
 	parts = parts || [];
 	for (s of struct) {
@@ -44,7 +46,10 @@ const onceReady = (connection) => {
 		connection.once("ready", () => {
 			resolve(connection);
 		});
-		connection.once("error", reject);
+		connection.once("error", (err) => {
+			reject(err);
+			conn.end();
+		});
 		connection.once("end", () => {
 			//console.log("IMAP end");
 		});
@@ -52,22 +57,23 @@ const onceReady = (connection) => {
 	});
 };
 
-const openBox = (connection, directory) => {
-	return new Promise((resolve, reject) => {
-		connection.openBox(directory, false, (err, box) => {
+const openBox = (conn, directory) => {
+	return new Promise(async (resolve, reject) => {
+		await onceReady(conn);
+		conn.openBox(directory, false, (err, box) => {
 			if (err) {
 				connection.end();
 				reject(err);
 			} else {
-				resolve({conn: connection, box: box});
+				resolve(box);
 			}
 		});
 	});
 };
 
-const searchIds = (conn, query) => {
+const search = (conn, arg) => {
 	return new Promise((resolve, reject) => {
-		conn.search(["ALL", ["TEXT", query]], (err, results) => {
+		conn.search(arg, (err, results) => {
 			if (err) {
 				reject(err);
 			} else {
@@ -75,6 +81,10 @@ const searchIds = (conn, query) => {
 			}
 		});
 	});
+};
+
+const searchIds = (conn, query) => {
+	return search(conn, ["ALL", ["TEXT", query]]);
 };
 
 const fetchMeta = (conn, which) => {
@@ -105,13 +115,13 @@ const fetchMeta = (conn, which) => {
 				});
 			});
 			msg.once("error", (err) => {
-				reject(err);
 				conn.end();
+				reject(err);
 			});
 		});
 		f.once("error", (err) => {
-			reject(err);
 			conn.end();
+			reject(err);
 		});
 		f.once("end", () => {
 			if (meta.length == 0) {
@@ -141,14 +151,14 @@ const fetchPart = (conn, uid, partID) => {
 				});
 			});
 			msg.on("error", (err) => {
-				reject(err);
 				conn.end();
+				reject(err);
 			});
 			msg.once("end", () => {});
 		});
 		f.once("error", (err) => {
-			reject(err);
 			conn.end();
+			reject(err);
 		});
 		f.once("end", () => {});
 	});
@@ -163,11 +173,11 @@ const appendMessage = (conn, mail, attachments) => {
 		if (!Array.isArray(mail.to)) {
 			mail.to = [mail.to]
 		}
+		mail.created = (new Date()).toISOString();
 		msg.header("To", mail.to.join(", "));
 		msg.header("From", mail.from);
-		msg.header("Date", (new Date()).toISOString());
+		msg.header("Date", mail.created); // TODO
 		msg.header("Subject", mail.subject);
-		msg.header("X-UID", 666);
 		const plainEntity = mimemessage.factory({
 			body: mail.body
 		});
@@ -184,86 +194,102 @@ const appendMessage = (conn, mail, attachments) => {
 		const options = {
 			//mailbox: directory,
 		};
-		conn.append(msg.toString(), options, (err) => {
+		conn.append(msg.toString(), options, async (err) => {
 			if (err) {
 				reject(err);
 			} else {
-				resolve(mail) // TODO ID???
+				const ids = await search(conn, [
+					"RECENT",
+					["HEADER", "SUBJECT", mail.subject],
+					["HEADER", "FROM", mail.from]
+				]);
+				if (ids && ids.length == 1) {
+					mail.id = ids[0];
+				} else {
+					console.warn("did not find an id");
+					// TODO
+				}
+				mail.attachments = [];
+				resolve(mail);
 			}
 		});
 	});
 };
 
-const addMessage = (conn, directory, mail, attachments) => {
-	return onceReady(conn)
-	.then((conn) => openBox(conn, directory))
-	.then((cb) => appendMessage(cb.conn, mail, attachments));
+const addMessage = async (conn, directory, mail, attachments) => {
+	const box = await openBox(conn, directory);
+	return appendMessage(conn, mail, attachments).finally(() => {
+		conn.closeBox((err) => {}); // TODO
+		conn.end();
+	});
 };
 
-const addAttachment = (conn, directory, mailId, attachment) => {
-	return new Promise((resolve, reject) => {
-		onceReady(conn)
-		.then((conn) => openBox(conn, directory))
-		.then(async (cb) => {
-			const meta = await fetchMeta(cb.conn, ""+mailId);
-			return {
-				meta: meta[0],
-				conn: cb.conn,
-			};
-		}).then((mc) => {
-			const parts = parseMailStruct(mc.meta.attrs.struct);
-			const att = attachmentsFromParts(parts);
-			let attachments = [attachment];
-			const mail = {
-				from: mc.meta.header.from,
-				to: mc.meta.header.to,
-				subject: mc.meta.header.subject
-			};
-			return appendMessage(mc.conn, mail, attachments)
-			.then(() => markDeleted(mc.conn, [mailId]));
-		}).catch(reject)
-		.finally(() => {
-			conn.end();
-			resolve();
-		});
+const updateMessage = async (conn, directory, mailId, mail) => {
+	const box = await openBox(conn, directory);
+	return appendMessage(conn, mail, [])
+	.then(async (msg) => {
+		await markDeleted(conn, [mailId]);
+		return msg;
+	}).finally(() => {
+		conn.closeBox((err) => {}); // TODO
+		conn.end();
+	});
+};
+
+const addAttachment = async (conn, directory, mailId, attachment) => {
+	const box = await openBox(conn, directory);
+	let meta = await fetchMeta(conn, ""+mailId);
+	meta = meta[0];
+	const parts = parseMailStruct(meta.attrs.struct);
+	const att = attachmentsFromParts(parts);
+	let attachments = [attachment];
+	const mail = {
+		from: meta.header.from,
+		to: meta.header.to,
+		subject: meta.header.subject
+	};
+	return appendMessage(conn, mail, attachments)
+	.then(() => markDeleted(conn, [mailId]))
+	.finally(() => {
+		conn.closeBox(() => {});
+		conn.end();
 	});
 };
 
 const getPart = (conn, directory, uid, partid) => {
-	return new Promise((resolve, reject) => {
-		onceReady(conn)
-		.then((conn) => openBox(conn, directory))
-		.then((cb) => {
-			fetchMeta(cb.conn, uid)
-			.then(async (meta) => {
-				meta = meta[0];
-				const part = await fetchPart(cb.conn, uid, partid);
-				if (!part) reject(new HTTPError(404, "No such attachment"));
-				const partInfo = parseMailStruct(meta.attrs.struct);
-				const thisPart = partInfo.find(i => i.partID == partid);
+	return new Promise(async (resolve, reject) => {
+		const box = await openBox(conn, directory);
+		fetchMeta(conn, uid).then(async (meta) => {
+			if (!meta || meta.length == 0) {
+				throw new HTTPError(404, "No such message")
+			}
+			meta = meta[0];
+			const partInfo = parseMailStruct(meta.attrs.struct);
+			const part = await fetchPart(conn, uid, partid);
+			const thisPart = partInfo.find(i => i.partID == partid);
+			if (!part) {
+				throw new HTTPError(404, "No such attachment");
+			} else if (thisPart.encoding === "7bit") {
+				resolve(Buffer.from(part, "ascii"));
+			} else {
 				resolve(Buffer.from(part, thisPart.encoding));
-			}).catch((e) => reject(new HTTPError(404, "No such message")));
+			}
+		}).finally(() => {
+			conn.closeBox(() => {});
+			conn.end();
 		});
 	});
 }
 
-const getMessages = (conn, directory, query, offset, limit) => {
-	return onceReady(conn)
-	.then((conn) => openBox(conn, directory))
-	.then(async (cb) => {
-		if (cb.box.messages.total == 0) {
-			return undefined;
-		}
-		if (query) {
-			const seqs = await searchIds(conn, query);
-			return fetchMeta(cb.conn, seqs);
-		} else {
-			return fetchMeta(cb.conn, "1:*");
-		}
-	}).then((meta) => {
-		if (!meta) {
-			return [];
-		}
+const getMessages = async (conn, directory, query, offset, limit) => {
+	const box = await openBox(conn, directory);
+	if (box.messages.total == 0) {
+		conn.closeBox(() => {});
+		conn.end();
+		return [];
+	}
+	let seqs = query ? await searchIds(conn, query) : "1:*";
+	return fetchMeta(conn, seqs).then((meta) => {
 		meta.reverse();
 		let mail = [];
 		let begin = offset;
@@ -278,7 +304,6 @@ const getMessages = (conn, directory, query, offset, limit) => {
 			const m = meta[i];
 			const parts = parseMailStruct(m.attrs.struct);
 			const att = attachmentsFromParts(parts);
-			//const body = "";
 			mail.push({
 				id: m.attrs.uid,
 				subject: m.header.subject?m.header.subject[0]:"",
@@ -289,7 +314,10 @@ const getMessages = (conn, directory, query, offset, limit) => {
 			});
 		}
 		return mail;
-	})
+	}).finally(() => {
+		conn.closeBox(() => {});
+		conn.end();
+	});
 }
 
 const markDeleted = (conn, uids) => {
@@ -310,10 +338,12 @@ const markDeleted = (conn, uids) => {
 	});
 };
 
-const deleteMessage = (conn, directory, uid) => {
-	return onceReady(conn)
-	.then((conn) => openBox(conn, directory))
-	.then((cb) => markDeleted(conn, [uid]));
+const deleteMessage = async (conn, directory, uid) => {
+	const box = await openBox(conn, directory);
+	return markDeleted(conn, [uid]).finally(() => {
+		conn.closeBox(() => {});
+		conn.end();
+	});
 };
 
 const deleteAttachment = (conn, directory, uid, aid) => {
@@ -322,7 +352,7 @@ const deleteAttachment = (conn, directory, uid, aid) => {
 
 module.exports = {
 	getPart, getMessages, addMessage, deleteMessage,
-	addAttachment, deleteAttachment
+	addAttachment, deleteAttachment, updateMessage
 };
 
 // vim:noai:ts=4:sw=4
