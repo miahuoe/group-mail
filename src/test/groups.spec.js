@@ -4,7 +4,7 @@ const request = require("supertest");
 const app = require("../app");
 const randomString = require("../lib/randomString");
 
-const numUsers = 10;
+const numUsers = 12;
 
 describe("/api/groups", () => {
 	let users = [];
@@ -24,8 +24,10 @@ describe("/api/groups", () => {
 				.auth(user.login, user.password)
 				.expect((res) => {
 					res.body.should.have.property("token");
+					res.body.should.have.property("userData");
 					res.body.should.be.string;
 					user.token = res.body.token;
+					user.id = res.body.userData.id;
 				})
 				.expect(200);
 			users.push(user);
@@ -102,7 +104,7 @@ describe("/api/groups", () => {
 				};
 				await request(app)
 					.post("/api/groups")
-					.set({ Authorization: "Token "+users[1].token })
+					.set({ Authorization: "Token "+users[i].token })
 					.send(group)
 					.expect((res) => {
 						res.body.should.be.object;
@@ -119,7 +121,7 @@ describe("/api/groups", () => {
 		});
 		it("GET should 404 on non-existent group", (done) => {
 			request(app)
-				.get(`/api/groups/${groups[1].id+10}/users`)
+				.get(`/api/groups/${groups[1].id+100}/users`)
 				.set({ Authorization: "Token "+users[1].token })
 				.expect(404)
 				.end(done);
@@ -236,22 +238,9 @@ describe("/api/groups", () => {
 			});
 		});
 		describe("DELETE /api/groups/:id/users/:id", () => {
-			let adminId = 0;
-			before((done) => {
-				request(app)
-					.get(`/api/groups/${groups[1].id}/users`)
-					.set({ Authorization: "Token "+users[1].token })
-					.expect(200)
-					.expect((res) => {
-						res.body.should.be.an.array;
-						res.body.should.have.length(7);
-						adminId = res.body.find(u => u.login == users[1].login);
-					})
-					.end(done);
-			});
 			it("should 400 on group admin", (done) => {
 				request(app)
-					.delete(`/api/groups/${groups[1].id}/users/${adminId}`)
+					.delete(`/api/groups/${groups[1].id}/users/${users[1].id}`)
 					.set({ Authorization: "Token "+users[1].token })
 					.expect(400)
 					.end(done);
@@ -263,11 +252,18 @@ describe("/api/groups", () => {
 					.expect(401)
 					.end(done);
 			});
-			it("should 404 on non-existing user", (done) => {
+			it("should 400 on non-member", (done) => {
 				request(app)
-					.delete(`/api/groups/${groups[1].id}/users/${adminId+1000}`)
+					.delete(`/api/groups/${groups[1].id}/users/${users[numUsers-1].id}`)
 					.set({ Authorization: "Token "+users[1].token })
 					.expect(400)
+					.end(done);
+			});
+			it("should 404 on non-existing user", (done) => {
+				request(app)
+					.delete(`/api/groups/${groups[1].id}/users/${users[1].id+1000}`)
+					.set({ Authorization: "Token "+users[1].token })
+					.expect(404)
 					.end(done);
 			});
 		});

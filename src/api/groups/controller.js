@@ -3,6 +3,7 @@ const User = require("../users/model");
 const Joi = require("joi");
 const md5 = require("md5");
 const { HTTPError } = require("../../lib/HTTPError");
+const randomString = require("../../lib/randomString");
 
 //const { transaction } = require("objection");
 
@@ -12,18 +13,6 @@ const getGroup = async (gid) => {
 		throw new HTTPError(404, "No such group");
 	}
 	return g;
-};
-
-const getUser = async (uid) => {
-	const u = await User.query().findById(uid);
-	if (!u) {
-		throw new HTTPError(404, "No such user");
-	}
-	return u;
-};
-
-const generatePassword = () => {
-	return Date.now().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
 const create = async (req, res, next) => {
@@ -38,7 +27,7 @@ const create = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const password = generatePassword();
+		const password = randomString();
 		const newGroup = {
 			adminId: req.user.id,
 			maillocal: v.maillocal,
@@ -161,7 +150,15 @@ const kick = async (req, res, next) => {
 		if (g.adminId == v.userId) {
 			throw new HTTPError(400, "Group admin cannot be kicked out of group");
 		}
-		const r = await g.$relatedQuery("users").unrelate().where("id", req.user.id);
+		const u = await User.query().findById(v.userId);
+		if (!u) {
+			throw new HTTPError(404, "No such user");
+		}
+		const m = await g.$relatedQuery("users").select("id").where("id", v.userId);
+		if (!m || m.length == 0) {
+			throw new HTTPError(400, "Not a member");
+		}
+		const r = await g.$relatedQuery("users").unrelate().where("id", v.userId);
 		res.status(204).json({message: "Kicked"});
 	} catch (err) {
 		next(err);
