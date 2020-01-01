@@ -50,6 +50,7 @@ const login = (req, res, next) => {
 	res.status(200).json({
 		token,
 		userData: {
+			id: req.user.id,
 			login: req.user.login,
 			email: req.user.email,
 			joined: req.user.joined,
