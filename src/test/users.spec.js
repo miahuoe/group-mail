@@ -13,73 +13,79 @@ const login = randomString();
 const password = randomString();
 const email = randomString();
 
-describe("/users", () => {
-	// TODO drop database
-	it("POST /api/users/register should reject too short login", (done) => {
-		const req = {
-			login: "m",
-			password: "xd",
-			email: "xd@xd.com"
-		};
-		request(app)
-			.post("/api/users/register")
-			.send(req)
-			.expect(400, done);
+describe("/api/users", () => {
+	describe("POST /api/users/register", () => {
+		it("should reject too short login", (done) => {
+			const req = {
+				login: "m",
+				password: "xd",
+				email: "xd@xd.com"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(400, done);
+		});
+		it("should reject too short password", (done) => {
+			const req = {
+				login: "miahuoe",
+				password: "xd",
+				email: "xd@xd.com"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(400, done);
+		});
+		it("should reject incorrect email", (done) => {
+			const req = {
+				login: "miahuoe",
+				password: "xd",
+				email: "xd@xd"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(400, done);
+		});
+		it("should create an user", (done) => {
+			const req = {
+				login: login,
+				password: password,
+				email: email+"@xd.com"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(201, done);
+		});
 	});
-	it("POST /api/users/register should reject too short password", (done) => {
-		const req = {
-			login: "miahuoe",
-			password: "xd",
-			email: "xd@xd.com"
-		};
-		request(app)
-			.post("/api/users/register")
-			.send(req)
-			.expect(400, done);
-	});
-	it("POST /api/users/register should reject incorrect email", (done) => {
-		const req = {
-			login: "miahuoe",
-			password: "xd",
-			email: "xd@xd"
-		};
-		request(app)
-			.post("/api/users/register")
-			.send(req)
-			.expect(400, done);
-	});
-	it("POST /api/users/register should create an user", (done) => {
-		const req = {
-			login: login,
-			password: password,
-			email: email+"@xd.com"
-		};
-		request(app)
-			.post("/api/users/register")
-			.send(req)
-			.expect(201, done);
-	});
-	it("POST /api/users/login should 404 on non-existing user login", (done) => {
-		request(app)
-			.post("/api/users/login")
-			.auth(login+"xxxxxD", password)
-			.expect(404, done);
-	});
-	it("POST /api/users/login should 401 on incorrect password", (done) => {
-		request(app)
-			.post("/api/users/login")
-			.auth(login, password+"xDDD")
-			.expect(401, done);
-	});
-	it("POST /api/users/login should login", (done) => {
-		request(app)
-			.post("/api/users/login")
-			.auth(login, password)
-			.expect("Content-Type", "application/json; charset=utf-8")
-			.expect((res) => {
-				res.body.should.have.property("token");
-			})
-			.expect(200, done);
+	describe("POST /api/users/login", () => {
+		it("should 404 on non-existing user login", (done) => {
+			request(app)
+				.post("/api/users/login")
+				.auth(login+"xxxxxD", password)
+				.expect(404, done);
+		});
+		it("should 401 on incorrect password", (done) => {
+			request(app)
+				.post("/api/users/login")
+				.auth(login, password+"xDDD")
+				.expect(401, done);
+		});
+		it("should login", (done) => {
+			request(app)
+				.post("/api/users/login")
+				.auth(login, password)
+				.expect("Content-Type", "application/json; charset=utf-8")
+				.expect((res) => {
+					res.body.should.have.property("token");
+					res.body.token.should.be.a.string;
+					res.body.should.have.property("userData");
+					res.body.userData.should.be.an.object;
+				})
+				.expect(200, done);
+		});
 	});
 })
 
