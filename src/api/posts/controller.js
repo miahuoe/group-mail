@@ -1,24 +1,11 @@
 const Post = require("./model");
 const User = require("../users/model");
-const Group = require("../groups/model");
+//const Group = require("../groups/model");
 const Joi = require("joi");
 const { HTTPError } = require("../../lib/HTTPError");
 
-const belongsToGroup = async (uid, gid) => {
-	const g = await Group.query().findById(gid);
-	if (!g) {
-		throw new HTTPError(404, "No such group");
-	}
-	const u = await g.$relatedQuery("users").select("id").where("id", uid);
-	return u && u.length === 1 && u[0].id == uid;
-};
-
 const addPost = async (req, res, next) => {
 	try {
-		const u = await belongsToGroup(req.user.id, req.groupId);
-		if (!u) {
-			throw new HTTPError(401, "Not in group");
-		}
 		const schema = Joi.object({
 			body: Joi.string().required(),
 		});
@@ -28,7 +15,7 @@ const addPost = async (req, res, next) => {
 		}
 		v = v.value;
 		const newPost = {
-			groupId: req.groupId,
+			groupId: req.group.id,
 			authorId: req.user.id,
 			body: v.body,
 		};
@@ -43,10 +30,6 @@ const addPost = async (req, res, next) => {
 
 const getPosts = async (req, res, next) => {
 	try {
-		const u = await belongsToGroup(req.user.id, req.groupId);
-		if (!u) {
-			throw new HTTPError(401, "Not in group");
-		}
 		const schema = Joi.object({
 			offset: Joi.number().integer().min(0).max(1000).default(0),
 			limit: Joi.number().integer().min(5).max(50).default(10),
@@ -56,11 +39,7 @@ const getPosts = async (req, res, next) => {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await Group.query().findById(req.groupId);
-		if (!g) {
-			throw new HTTPError(404, "No such group");
-		}
-		const p = await g.$relatedQuery("posts")
+		const p = await req.group.$relatedQuery("posts")
 			.select("id", "body", "created as date", "authorId")
 			.orderBy("id", "desc")
 			.orderBy("created", "desc")
