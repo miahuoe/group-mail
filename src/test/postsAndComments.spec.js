@@ -128,7 +128,7 @@ describe("posts & comments", () => {
 	describe("commenting and posting", () => {
 		it("should 404 for inexistent post", (done) => {
 			request(app)
-				.get(`/api/groups/${groups[0].id}/posts/1/comments`)
+				.get(`/api/groups/${groups[0].id}/posts/999999999/comments`)
 				.set({ Authorization: "Token "+users[0].token })
 				.expect(404)
 				.end(done);
@@ -148,21 +148,20 @@ describe("posts & comments", () => {
 						posts.push(parseInt(res.body.id));
 					});
 			}
-			request(app)
+			await request(app)
 				.get(`/api/groups/${groups[1].id}/posts`)
 				.set({ Authorization: "Token "+users[1].token })
 				.expect(200)
 				.expect((res) => {
 					res.body.should.be.an.array;
-					res.body.should.not.be.empty;
 					res.body.should.have.length(2);
 					res.body[0].should.have.property("id");
 					res.body[0].should.have.property("body");
 					res.body[0].should.have.property("author");
 					res.body[0].id.should.be.equal(posts[1]);
 					res.body[1].id.should.be.equal(posts[0]);
-				})
-				.end(done);
+				});
+			done();
 		});
 		it("should 401 when getting posts from existing group, as non-member", (done) => {
 			request(app)
@@ -215,6 +214,6 @@ describe("posts & comments", () => {
 		});
 	});
 	// TODO limit and offset
-})
+});
 
 // vim: noai:ts=4:sw=4
