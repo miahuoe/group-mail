@@ -1,3 +1,5 @@
+"use strict";
+
 const { imapConnection } = require("../../config");
 const imap = require("imap");
 

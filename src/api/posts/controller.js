@@ -1,3 +1,5 @@
+"use strict";
+
 const Post = require("./model");
 const User = require("../users/model");
 //const Group = require("../groups/model");
@@ -45,7 +47,7 @@ const getPosts = async (req, res, next) => {
 			.orderBy("created", "desc")
 			.limit(v.limit)
 			.offset(v.offset);
-		for (post of p) {
+		for (let post of p) {
 			await post.$relatedQuery("author").select("id", "login", "email", "joined");
 			delete post.authorId;
 		}

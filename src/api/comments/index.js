@@ -1,3 +1,5 @@
+"use strict";
+
 const { Router } = require("express");
 const router = Router({ mergeParams: true });
 const { addComment, getComments } = require("./controller");

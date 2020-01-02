@@ -1,3 +1,5 @@
+"use strict";
+
 const { sign } = require("../../services/jwt");
 const { passwordHash } = require("../../services/bcrypt");
 const { limits } = require("../../config");

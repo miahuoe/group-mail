@@ -1,3 +1,5 @@
+"use strict";
+
 //const config = require("../../config");
 const multer = require("multer");
 const storage = multer.memoryStorage();

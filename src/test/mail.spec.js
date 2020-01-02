@@ -2,7 +2,6 @@ const should = require("should");
 const assert = require("assert");
 const request = require("supertest");
 const app = require("../app");
-const fs = require("fs");
 const randomString = require("../lib/randomString");
 
 const createGroup = async () => {
@@ -149,7 +148,6 @@ describe("mail", () => {
 				.expect(401)
 				.end(done);
 		});
-		/* TODO
 		it("should 404 on non-existent message", (done) => {
 			request(app)
 				.del(`/api/groups/${groupId}/mail/Drafts/messages/${9999999}`)
@@ -157,7 +155,6 @@ describe("mail", () => {
 				.expect(404)
 				.end(done);
 		});
-		*/
 		it("should 404 on non-existent group", (done) => {
 			request(app)
 				.del(`/api/groups/${999999}/mail/Drafts/messages/${mailId}`)

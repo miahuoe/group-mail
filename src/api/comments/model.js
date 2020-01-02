@@ -1,3 +1,5 @@
+"use strict";
+
 const { Model } = require("objection");
 const knex = require("../../services/knex");
 

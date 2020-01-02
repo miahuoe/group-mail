@@ -1,4 +1,5 @@
-//"use strict"; // TODO
+"use strict";
+
 const base64 = require("../../services/imap");
 const { imap, connect } = require("../../services/imap");
 const mimemessage = require("mimemessage");
@@ -19,7 +20,7 @@ const attachmentFromBuffer = (buffer, name) => {
 
 const parseMailStruct = (struct, parts) => {
 	parts = parts || [];
-	for (s of struct) {
+	for (let s of struct) {
 		if (Array.isArray(s)) {
 			parseMailStruct(s, parts);
 		} else {
@@ -34,7 +35,7 @@ const parseMailStruct = (struct, parts) => {
 
 const attachmentsFromParts = (parts) => {
 	let att = [];
-	for (p of parts) {
+	for (let p of parts) {
 		if (p.disposition && ["INLINE", "ATTACHMENT"].includes(p.disposition.type)) {
 			let a = {
 				id: parseInt(p.partID),
@@ -249,7 +250,7 @@ const cloneMessage = (conn, uid, mail, newAtt, excludeAttachments = []) => {
 		}
 		const meta = await fetchMeta(conn, uid);
 		const parts = parseMailStruct(meta[0].attrs.struct);
-		for (a of attachmentsFromParts(parts)) {
+		for (let a of attachmentsFromParts(parts)) {
 			if (excludeAttachments.includes(a.id)) {
 				continue;
 			}
@@ -373,7 +374,7 @@ const getMessages = async (conn, directory, query, offset, limit) => {
 		if (end >= meta.length) {
 			end = meta.length;
 		}
-		for (i = begin; i < end; i++) {
+		for (let i = begin; i < end; i++) {
 			mail.push(metaToMailPrototype(meta[i]));
 		}
 		return mail;

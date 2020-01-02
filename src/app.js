@@ -1,3 +1,5 @@
+"use strict";
+
 const { node } = require("./config");
 const express = require("./services/express");
 const api = require("./api");

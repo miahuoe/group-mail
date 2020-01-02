@@ -1,3 +1,5 @@
+"use strict";
+
 const bcrypt = require("bcrypt");
 const { Model } = require("objection");
 const knex = require("../../services/knex");

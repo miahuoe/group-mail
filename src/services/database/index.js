@@ -1,3 +1,5 @@
+"use strict";
+
 const { databaseConnection } = require("../../config");
 const mysql = require("mysql2");
 

@@ -1,3 +1,4 @@
+"use strict";
 
 class HTTPError extends Error {
 	constructor(httpcode, message) {

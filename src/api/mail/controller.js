@@ -1,3 +1,5 @@
+"use strict";
+
 const Group = require("../groups/model");
 const model = require("./model");
 const { connect } = require("../../services/imap");

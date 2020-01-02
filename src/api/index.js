@@ -1,3 +1,5 @@
+"use strict";
+
 const groups = require("./groups");
 const users = require("./users");
 const {Router} = require("express");

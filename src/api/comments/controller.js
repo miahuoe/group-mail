@@ -1,3 +1,5 @@
+"use strict";
+
 const Post = require("../posts/model");
 const Comment = require("../comments/model");
 const Group = require("../groups/model");

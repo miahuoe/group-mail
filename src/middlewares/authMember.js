@@ -1,10 +1,21 @@
+"use strict";
+
 const Group = require("../api/groups/model");
 const { HTTPError, errorHandler } = require("../lib/HTTPError");
+const Joi = require("joi");
 
 const authMember = async (req, res, next) => {
-	// TODO validate
 	try {
-		const g = await Group.query().findById(parseInt(req.params.groupId));
+		const schema = Joi.object({
+			groupId: Joi.number().integer().required(),
+		});
+		const v = schema.validate({
+			groupId: req.params.groupId,
+		});
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		const g = await Group.query().findById(v.value.groupId);
 		if (!g) {
 			throw new HTTPError(404, "No such group");
 		}

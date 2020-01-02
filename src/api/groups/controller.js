@@ -1,3 +1,5 @@
+"use strict";
+
 const Group = require("./model");
 const User = require("../users/model");
 const Joi = require("joi");
@@ -54,7 +56,7 @@ const getUsersGroups = async (req, res, next) => {
 	try {
 		const u = await User.query().findById(req.user.id);
 		const groups = await u.$relatedQuery("groups");
-		for (g of groups) {
+		for (let g of groups) {
 			delete g.adminId;
 		}
 		res.status(200).json(groups);
