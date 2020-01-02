@@ -1,21 +1,48 @@
 const { Router } = require("express");
-const router = Router();
+const router = Router({ mergeParams: true });
 const { getMessage, getMessages, deleteMessage, addMessage, updateMessage,
 	getAttachment, addAttachment, deleteAttachment } = require("./controller");
 const token = require("../../middlewares/token");
 const upload = require("../../middlewares/multer");
+const authMember = require("../../middlewares/authMember");
+const Joi = require("joi");
+const { HTTPError, errorHandler } = require("../../lib/HTTPError");
 
-router.get("/:directory", token, getMessages);
-router.post("/:directory", token, addMessage);
+const allowDirectories = (dirs) => {
+	return (req, res, next) => {
+		try {
+			const schema = Joi.object({
+				directory: Joi.string().valid(...dirs).required(),
+			});
+			const v = schema.validate({
+				directory: req.params.directory,
+			});
+			if (v.error) {
+				throw new HTTPError(400, v.error.details[0].message);
+			}
+			req.directory = v.value.directory;
+			next();
+		} catch (err) {
+			errorHandler(err, req, res, next);
+		}
+	};
+};
 
-router.get("/:directory/messages/:messageId", token, getMessage);
-router.put("/:directory/messages/:messageId", token, updateMessage);
-router.delete("/:directory/messages/:messageId", token, deleteMessage);
+const allDirs = ["INBOX", "Sent", "Spam", "Drafts"];
+const onlyDrafts = ["Drafts"];
 
-router.post("/:directory/messages/:messageId/attachments", token, upload.single("file"), addAttachment);
+router.get("/:directory", token, authMember, allowDirectories(allDirs), getMessages);
+router.post("/:directory", token, authMember, allowDirectories(onlyDrafts), addMessage);
+
+// TODO authMember cont.
+router.get("/:directory/messages/:messageId", token, allowDirectories(allDirs), getMessage);
+router.put("/:directory/messages/:messageId", token, allowDirectories(onlyDrafts), updateMessage);
+router.delete("/:directory/messages/:messageId", token, allowDirectories(allDirs), deleteMessage);
+
+router.post("/:directory/messages/:messageId/attachments", token, allowDirectories(onlyDrafts), upload.single("file"), addAttachment);
 
 router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, getAttachment);
-router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, deleteAttachment);
+router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, allowDirectories(onlyDrafts), deleteAttachment);
 
 module.exports = router;
 
