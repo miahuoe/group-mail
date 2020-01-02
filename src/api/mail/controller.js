@@ -4,19 +4,6 @@ const { connect } = require("../../services/imap");
 const Joi = require("joi");
 const { HTTPError } = require("../../lib/HTTPError");
 
-const getGroup = async (gid, uid) => {
-	const g = await Group.query().findById(gid);
-	if (!g) {
-		throw new HTTPError(404, "No such group");
-	}
-	const u = await g.$relatedQuery("users").select("id").where("id", uid);
-	if (u && u.length === 1 && u[0].id == uid) {
-		return g;
-	} else {
-		throw new HTTPError(401, "Not in group");
-	}
-};
-
 const getMessages = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
@@ -44,22 +31,17 @@ const getMessages = async (req, res, next) => {
 const getMessage = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
-			directory: req.params.directory,
 			messageId: req.params.messageId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		const mail = await model.getPart(conn, v.directory, v.messageId, 1);
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		const mail = await model.getPart(conn, req.directory, v.messageId, 1);
 		if (!mail) {
 			throw new HTTPError(404, "No such message");
 		}
@@ -74,22 +56,17 @@ const getMessage = async (req, res, next) => {
 const deleteMessage = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
-			directory: req.params.directory,
 			messageId: req.params.messageId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		await model.deleteMessage(conn, v.directory, v.messageId);
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		await model.deleteMessage(conn, req.directory, v.messageId);
 		res.sendStatus(204);
 	} catch (err) {
 		next(err);
@@ -126,37 +103,30 @@ const addMessage = async (req, res, next) => {
 };
 
 const updateMessage = async (req, res, next) => {
+	// TODO update only present fields
 	try {
 		const schema = Joi.object({
 			subject: Joi.string().required(),
 			body: Joi.string().required(),
 			to: Joi.array().items(Joi.string()).required(),
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
 			subject: req.body.subject,
 			body: req.body.body,
 			to: req.body.to,
-			directory: req.params.directory,
 			messageId: req.params.messageId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		if (v.directory != "Drafts") {
-			throw new HTTPError(400, "Cannot update mail there");
-		}
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		const mail = await model.updateMessage(conn, v.directory, v.messageId, {
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		const mail = await model.updateMessage(conn, req.directory, v.messageId, {
 			subject: v.subject,
 			body: v.body,
 			to: v.to,
-			from: g.maillocal+"@mail.com",
+			from: req.group.maillocal+"@mail.com",
 		});
 		res.status(200).json(mail);
 	} catch (err) {
@@ -167,24 +137,19 @@ const updateMessage = async (req, res, next) => {
 const getAttachment = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
 			attachmentId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
-			directory: req.params.directory,
 			messageId: req.params.messageId,
 			attachmentId: req.params.attachmentId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		const atta = await model.getPart(conn, v.directory, v.messageId, v.attachmentId);
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		const atta = await model.getPart(conn, req.directory, v.messageId, v.attachmentId);
 		res.set("Content-Type", "application/octet-stream");
 		res.status(200).end(Buffer.from(atta), "binary");
 	} catch (err) {
@@ -198,22 +163,17 @@ const addAttachment = async (req, res, next) => {
 			throw new HTTPError(400, "File required");
 		}
 		const schema = Joi.object({
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
-			directory: req.params.directory,
 			messageId: req.params.messageId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		const mail = await model.addAttachment(conn, v.directory, v.messageId, req.file);
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		const mail = await model.addAttachment(conn, req.directory, v.messageId, req.file);
 		res.status(201).json(mail);
 	} catch (err) {
 		next(err);
@@ -223,24 +183,19 @@ const addAttachment = async (req, res, next) => {
 const deleteAttachment = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			directory: Joi.string().valid("INBOX", "Sent", "Spam", "Drafts").required(),
 			messageId: Joi.number().integer().required(),
 			attachmentId: Joi.number().integer().required(),
-			groupId: Joi.number().integer().required(),
 		});
 		let v = schema.validate({
-			directory: req.params.directory,
 			messageId: req.params.messageId,
 			attachmentId: req.params.attachmentId,
-			groupId: req.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId, req.user.id);
-		const conn = await connect(g.maillocal, g.mailpass);
-		const mail = await model.deleteAttachment(conn, v.directory, v.messageId, v.attachmentId);
+		const conn = await connect(req.group.maillocal, req.group.mailpass);
+		const mail = await model.deleteAttachment(conn, req.directory, v.messageId, v.attachmentId);
 		res.status(200).json(mail);
 	} catch (err) {
 		next(err);

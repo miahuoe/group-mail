@@ -9,11 +9,6 @@ const token = require("../../middlewares/token");
 const { HTTPError, errorHandler } = require("../../lib/HTTPError");
 const authMember = require("../../middlewares/authMember");
 
-const withGroupId = async (req, res, next) => {
-	req.groupId = parseInt(req.params.groupId);
-	next();
-};
-
 router.get("/", token, getUsersGroups);
 
 router.post("/", token, create);
@@ -29,7 +24,7 @@ router.delete("/:groupId/users/:userId", token, authMember, kick);
 
 router.use("/:groupId/posts", posts);
 
-router.use("/:groupId/mail", withGroupId, mail);
+router.use("/:groupId/mail", mail);
 
 module.exports = router;
 

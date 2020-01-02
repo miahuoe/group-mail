@@ -34,15 +34,14 @@ const onlyDrafts = ["Drafts"];
 router.get("/:directory", token, authMember, allowDirectories(allDirs), getMessages);
 router.post("/:directory", token, authMember, allowDirectories(onlyDrafts), addMessage);
 
-// TODO authMember cont.
-router.get("/:directory/messages/:messageId", token, allowDirectories(allDirs), getMessage);
-router.put("/:directory/messages/:messageId", token, allowDirectories(onlyDrafts), updateMessage);
-router.delete("/:directory/messages/:messageId", token, allowDirectories(allDirs), deleteMessage);
+router.get("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), getMessage);
+router.put("/:directory/messages/:messageId", token, authMember, allowDirectories(onlyDrafts), updateMessage);
+router.delete("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), deleteMessage);
 
-router.post("/:directory/messages/:messageId/attachments", token, allowDirectories(onlyDrafts), upload.single("file"), addAttachment);
+router.post("/:directory/messages/:messageId/attachments", token, authMember, allowDirectories(onlyDrafts), upload.single("file"), addAttachment);
 
-router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, getAttachment);
-router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, allowDirectories(onlyDrafts), deleteAttachment);
+router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(allDirs), getAttachment);
+router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(onlyDrafts), deleteAttachment);
 
 module.exports = router;
 

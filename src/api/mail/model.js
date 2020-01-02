@@ -108,7 +108,7 @@ const openBox = (conn, directory) => {
 		await onceReady(conn);
 		conn.openBox(directory, false, (err, box) => {
 			if (err) {
-				connection.end();
+				conn.end();
 				reject(err);
 			} else {
 				resolve(box);
@@ -347,7 +347,7 @@ const getPart = (conn, directory, uid, partid) => {
 			} else {
 				resolve(Buffer.from(part, thisPart.encoding));
 			}
-		}).finally(() => {
+		}).catch(reject).finally(() => {
 			conn.closeBox(() => {});
 			conn.end();
 		});
