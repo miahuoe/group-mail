@@ -7,14 +7,6 @@ const randomString = require("../../lib/randomString");
 
 //const { transaction } = require("objection");
 
-const getGroup = async (gid) => {
-	const g = await Group.query().findById(gid);
-	if (!g) {
-		throw new HTTPError(404, "No such group");
-	}
-	return g;
-};
-
 const create = async (req, res, next) => {
 	const schema = Joi.object({
 		description: Joi.string(),
@@ -77,25 +69,22 @@ const invite = async (req, res, next) => {
 			minDomainSegments: 2, // something.com
 			tlds: { allow: ["com"] }
 		}).required(),
-		groupId: Joi.number().integer().required(),
 	});
 	try {
 		let v = schema.validate({
 			email: req.query.email,
-			groupId: req.params.groupId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId);
 		const u = await User.query().findOne({
 			email: v.email,
 		});
 		if (!u) {
 			throw new HTTPError(404, "No such user");
 		}
-		const r = await g.$relatedQuery("users").relate(u.id);
+		const r = await req.group.$relatedQuery("users").relate(u.id);
 		res.status(201).json({message: "Invited"});
 	} catch (err) {
 		if (err.code && err.code === "ER_DUP_ENTRY") {
@@ -107,22 +96,16 @@ const invite = async (req, res, next) => {
 };
 
 const leave = async (req, res, next) => {
-	const schema = Joi.object({
-		groupId: Joi.number().integer().required(),
-	});
 	try {
-		let v = schema.validate({
-			groupId: req.params.groupId,
-		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId);
-		if (g.adminId == req.user.id) {
+		if (req.group.adminId == req.user.id) {
 			throw new HTTPError(400, "Group admin cannot leave group");
 		}
-		const r = await g.$relatedQuery("users").unrelate().where("id", req.user.id);
+		const r = await req.group.$relatedQuery("users")
+			.unrelate().where("id", req.user.id);
 		res.status(204).json({message: "Left"});
 	} catch (err) {
 		next(err);
@@ -131,34 +114,33 @@ const leave = async (req, res, next) => {
 
 const kick = async (req, res, next) => {
 	const schema = Joi.object({
-		groupId: Joi.number().integer().required(),
 		userId: Joi.number().integer().required(),
 	});
 	try {
 		let v = schema.validate({
-			groupId: req.params.groupId,
 			userId: req.params.userId,
 		});
 		if (v.error) {
 			throw new HTTPError(400, v.error.details[0].message);
 		}
 		v = v.value;
-		const g = await getGroup(v.groupId);
-		if (g.adminId != req.user.id) {
+		if (req.group.adminId != req.user.id) {
 			throw new HTTPError(401, "Only group admin can kick");
 		}
-		if (g.adminId == v.userId) {
+		if (req.group.adminId == v.userId) {
 			throw new HTTPError(400, "Group admin cannot be kicked out of group");
 		}
 		const u = await User.query().findById(v.userId);
 		if (!u) {
 			throw new HTTPError(404, "No such user");
 		}
-		const m = await g.$relatedQuery("users").select("id").where("id", v.userId);
+		const m = await req.group.$relatedQuery("users")
+			.select("id").where("id", v.userId);
 		if (!m || m.length == 0) {
 			throw new HTTPError(400, "Not a member");
 		}
-		const r = await g.$relatedQuery("users").unrelate().where("id", v.userId);
+		const r = await req.group.$relatedQuery("users")
+			.unrelate().where("id", v.userId);
 		res.status(204).json({message: "Kicked"});
 	} catch (err) {
 		next(err);
@@ -167,8 +149,7 @@ const kick = async (req, res, next) => {
 
 const getMembers = async (req, res, next) => {
 	try {
-		const g = await getGroup(req.params.groupId);
-		const members = await g.$relatedQuery("users")
+		const members = await req.group.$relatedQuery("users")
 			.select("id", "login", "email", "joined")
 			.orderBy("joined", "desc");
 		res.status(200).json(members);
