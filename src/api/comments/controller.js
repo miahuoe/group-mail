@@ -4,24 +4,8 @@ const Group = require("../groups/model");
 const Joi = require("joi");
 const { HTTPError } = require("../../lib/HTTPError");
 
-const belongsToGroup = async (uid, gid) => {
-	const g = await Group.query().findById(gid);
-	if (!g) {
-		throw new HTTPError(404, "No such group");
-	}
-	return g.$relatedQuery("users").select("id").where("id", uid);
-};
-
 const addComment = async (req, res, next) => {
 	try {
-		const u = await belongsToGroup(req.user.id, req.groupId);
-		if (!u) {
-			throw new HTTPError(401, "Not in group");
-		}
-		const p = await Post.query().findById(req.postId);
-		if (!p) {
-			throw new HTTPError(404, "No such post");
-		}
 		const schema = Joi.object({
 			body: Joi.string().required(),
 		});
@@ -31,7 +15,7 @@ const addComment = async (req, res, next) => {
 		}
 		v = v.value;
 		const newComment = {
-			postId: req.postId,
+			postId: req.post.id,
 			authorId: req.user.id,
 			body: v.body,
 		};
@@ -55,11 +39,7 @@ const getComments = async (req, res, next) => {
 	}
 	v = v.value;
 	try {
-		const g = await Group.query().findById(req.groupId);
-		if (!g) throw new HTTPError(404, "No such group");
-		const p = await g.$relatedQuery("posts").findById(req.postId);
-		if (!p) throw new HTTPError(404, "No such post");
-		const c = await p.$relatedQuery("comments")
+		const c = await req.post.$relatedQuery("comments")
 			.orderBy("id", "desc")
 			.orderBy("created", "desc")
 			.limit(v.limit)

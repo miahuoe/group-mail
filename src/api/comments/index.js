@@ -1,7 +1,7 @@
-const { Router } = require("express")
-const router = Router()
-const { addComment, getComments } = require("./controller")
-const token = require("../../middlewares/token")
+const { Router } = require("express");
+const router = Router({ mergeParams: true });
+const { addComment, getComments } = require("./controller");
+const token = require("../../middlewares/token");
 
 router.get("/", token, getComments);
 
