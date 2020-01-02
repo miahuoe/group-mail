@@ -1,5 +1,5 @@
-const { Router } = require("express")
-const router = Router()
+const { Router } = require("express");
+const router = Router({ mergeParams: true });
 const { register, login } = require("./controller");
 const password = require("../../middlewares/password");
 
