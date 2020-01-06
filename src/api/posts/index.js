@@ -17,7 +17,7 @@ router.post("/", token, authMember, addPost);
 router.use("/:postId/comments", async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			postId: Joi.number().integer().required(),
+			postId: Joi.number().integer().min(1).required(),
 		});
 		const v = schema.validate({
 			postId: req.params.postId,
