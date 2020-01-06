@@ -7,7 +7,7 @@ const Joi = require("joi");
 const authMember = async (req, res, next) => {
 	try {
 		const schema = Joi.object({
-			groupId: Joi.number().integer().required(),
+			groupId: Joi.number().integer().min(1).required(),
 		});
 		const v = schema.validate({
 			groupId: req.params.groupId,
