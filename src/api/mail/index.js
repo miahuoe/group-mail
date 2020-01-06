@@ -30,20 +30,48 @@ const allowDirectories = (dirs) => {
 	};
 };
 
+const withMessageId = (req, res, next) => {
+	try {
+		const schema = Joi.number().integer().min(1).required();
+		let v = schema.validate(req.params.messageId);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		req.messageId = v.value;
+		next();
+	} catch (err) {
+		errorHandler(err, req, res, next);
+	}
+};
+
+const withAttachmentId = (req, res, next) => {
+	try {
+		const schema = Joi.number().integer().min(1).required();
+		let v = schema.validate(req.params.attachmentId);
+		if (v.error) {
+			throw new HTTPError(400, v.error.details[0].message);
+		}
+		req.attachmentId = v.value;
+		next();
+	} catch (err) {
+		errorHandler(err, req, res, next);
+	}
+};
+
 const allDirs = ["INBOX", "Sent", "Spam", "Drafts"];
 const onlyDrafts = ["Drafts"];
 
 router.get("/:directory", token, authMember, allowDirectories(allDirs), getMessages);
 router.post("/:directory", token, authMember, allowDirectories(onlyDrafts), addMessage);
 
-router.get("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), getMessage);
-router.put("/:directory/messages/:messageId", token, authMember, allowDirectories(onlyDrafts), updateMessage);
-router.delete("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), deleteMessage);
+router.get("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), withMessageId, getMessage);
+router.put("/:directory/messages/:messageId", token, authMember, allowDirectories(onlyDrafts), withMessageId, updateMessage);
+router.delete("/:directory/messages/:messageId", token, authMember, allowDirectories(allDirs), withMessageId, deleteMessage);
 
-router.post("/:directory/messages/:messageId/attachments", token, authMember, allowDirectories(onlyDrafts), upload.single("file"), addAttachment);
+router.post("/:directory/messages/:messageId/attachments", token, authMember, allowDirectories(onlyDrafts), withMessageId, upload.single("file"), addAttachment);
 
-router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(allDirs), getAttachment);
-router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(onlyDrafts), deleteAttachment);
+router.get("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(allDirs), withMessageId, withAttachmentId, getAttachment);
+router.delete("/:directory/messages/:messageId/attachments/:attachmentId", token, authMember, allowDirectories(onlyDrafts), withMessageId, withAttachmentId, deleteAttachment);
 
 module.exports = router;
 
