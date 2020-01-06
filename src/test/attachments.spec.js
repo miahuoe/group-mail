@@ -44,30 +44,38 @@ const createGroup = async () => {
 	return [token, groupId];
 };
 
+const createMail = async (mail) => {
+	const [token, groupId] = await createGroup();
+	let mailId = 0;
+	if (!mail) {
+		mail = {
+			subject: randomString(),
+			to: [randomString()+"@mail.com"],
+			body: randomString(),
+		};
+	}
+	await request(app)
+		.post(`/api/groups/${groupId}/mail/Drafts`)
+		.set({ Authorization: "Token "+token })
+		.send(mail)
+		.expect(201)
+		.expect((res) => {
+			res.body.should.have.property("id");
+			res.body.should.have.property("attachments");
+			res.body.attachments.should.be.an.array;
+			res.body.attachments.should.be.empty;
+			mailId = res.body.id;
+		});
+	return [token, groupId, mailId];
+};
+
 describe("attachments", () => {
 	describe("POST /api/groups/:id/mail/:dir/messages/:id/attachments", () => {
 		let token = "";
 		let groupId = 0;
 		let mailId = 0;
-		const mail = {
-			subject: randomString(),
-			to: [randomString()+"@mail.com"],
-			body: randomString(),
-		};
 		before(async (done) => {
-			[token, groupId] = await createGroup();
-			await request(app)
-				.post(`/api/groups/${groupId}/mail/Drafts`)
-				.set({ Authorization: "Token "+token })
-				.send(mail)
-				.expect(201)
-				.expect((res) => {
-					res.body.should.have.property("id");
-					res.body.should.have.property("attachments");
-					res.body.attachments.should.be.an.array;
-					res.body.attachments.should.be.empty;
-					mailId = res.body.id;
-				});
+			[token, groupId, mailId] = await createMail();
 			done();
 		});
 		it("should 404 on non-existent group", (done) => {
@@ -159,6 +167,27 @@ describe("attachments", () => {
 			}
 			done();
 		});
+		it("should 400 on groupId other than int", (done) => {
+			request(app)
+				.get(`/api/groups/hehe/mail/Drafts/messages/${mailId}/attachments/${atts[0].id}`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
+		it("should 400 on mailId other than int", (done) => {
+			request(app)
+				.get(`/api/groups/${groupId}/mail/Drafts/messages/hehe/attachments/${atts[0].id}`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
+		it("should 400 on attachmentId other than int", (done) => {
+			request(app)
+				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/hehe`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
 		it("should 401 on missing token", (done) => {
 			request(app)
 				.get(`/api/groups/${9999999}/mail/Drafts/messages/${mailId}/attachments/${atts[0].id}`)
@@ -168,6 +197,7 @@ describe("attachments", () => {
 		it("should 401 as non-member of group", (done) => {
 			request(app)
 				.get(`/api/groups/${groupId2}/mail/Drafts/messages/${mailId}/attachments/${atts[0].id}`)
+				.set({ Authorization: "Token "+token })
 				.expect(401)
 				.end(done);
 		});
@@ -230,19 +260,7 @@ describe("attachments", () => {
 			body: "hello imap",
 		};
 		before(async (done) => {
-			[token, groupId] = await createGroup();
-			await request(app)
-				.post(`/api/groups/${groupId}/mail/Drafts`)
-				.set({ Authorization: "Token "+token })
-				.send(mail)
-				.expect(201)
-				.expect((res) => {
-					res.body.should.have.property("id");
-					res.body.should.have.property("attachments");
-					res.body.attachments.should.be.an.array;
-					res.body.attachments.should.be.empty;
-					mailId = res.body.id;
-				});
+			[token, groupId, mailId] = await createMail(mail);
 			await request(app)
 				.post(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments`)
 				.set({ Authorization: "Token "+token })
@@ -296,29 +314,57 @@ describe("attachments", () => {
 				})
 				.end(done);
 		});
+		it("should 400 on directory other than Drafts", (done) => {
+			request(app)
+				.del(`/api/groups/hehe/mail/INBOX/messages/${mailId}/attachments/${attId}`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
+		it("should 400 on groupId other than int", (done) => {
+			request(app)
+				.del(`/api/groups/hehe/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
+		it("should 400 on messageId other than int", (done) => {
+			request(app)
+				.del(`/api/groups/${groupId}/mail/Drafts/messages/hehe/attachments/${attId}`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
+		it("should 400 on attachmentId other than int", (done) => {
+			request(app)
+				.del(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/hehe`)
+				.set({ Authorization: "Token "+token })
+				.expect(400)
+				.end(done);
+		});
 		it("should 401 when token is missing", (done) => {
 			request(app)
-				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+				.del(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
 				.expect(401)
 				.end(done);
 		});
 		it("should 404 on non-existent group", (done) => {
 			request(app)
-				.get(`/api/groups/${9999999}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+				.del(`/api/groups/${9999999}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(404)
 				.end(done);
 		});
 		it("should 404 on non-existent message", (done) => {
 			request(app)
-				.get(`/api/groups/${groupId}/mail/Drafts/messages/${99999999}/attachments/${attId}`)
+				.del(`/api/groups/${groupId}/mail/Drafts/messages/${9999999}/attachments/${attId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(404)
 				.end(done);
 		});
 		it("should 404 on non-existent attachment", (done) => {
 			request(app)
-				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
+				.del(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}/attachments/${attId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(404)
 				.end(done);
