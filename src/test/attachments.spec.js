@@ -60,8 +60,7 @@ const createMail = async (mail) => {
 		.send(mail)
 		.expect(201)
 		.expect((res) => {
-			res.body.should.have.property("id");
-			res.body.should.have.property("attachments");
+			res.body.should.have.properties(["id", "attachments"]);
 			res.body.attachments.should.be.an.array;
 			res.body.attachments.should.be.empty;
 			mailId = res.body.id;
@@ -119,8 +118,7 @@ describe("attachments", () => {
 					res.body.should.be.an.array;
 					res.body.should.not.be.empty;
 					res.body.should.have.length(1);
-					res.body[0].should.have.property("id");
-					res.body[0].should.have.property("attachments");
+					res.body[0].should.have.properties(["id", "attachments"]);
 					res.body[0].attachments.should.be.an.array;
 					res.body[0].attachments.should.have.length(2);
 					res.body[0].attachments[0].should.have.property("id");
@@ -159,8 +157,7 @@ describe("attachments", () => {
 					.expect(201)
 					.expect((res) => {
 						res.body.should.be.an.object;
-						res.body.should.have.property("id");
-						res.body.should.have.property("attachments");
+						res.body.should.have.properties(["id", "attachments"]);
 						mailId = res.body.id;
 						atts = res.body.attachments;
 					});
@@ -268,8 +265,7 @@ describe("attachments", () => {
 				.expect(201)
 				.expect((res) => {
 					res.body.should.be.an.object;
-					res.body.should.have.property("id");
-					res.body.should.have.property("attachments");
+					res.body.should.have.properties(["id", "attachments"]);
 					res.body.attachments.should.be.an.array;
 					res.body.attachments.should.have.length(1);
 					res.body.attachments[0].should.have.property("name");
@@ -294,8 +290,7 @@ describe("attachments", () => {
 				.expect(200)
 				.expect((res) => {
 					res.body.should.be.an.object;
-					res.body.should.have.property("id");
-					res.body.should.have.property("attachments");
+					res.body.should.have.properties(["id", "attachments"]);
 					res.body.attachments.should.be.an.array;
 					res.body.attachments.should.be.empty;
 					mailId = res.body.id;
@@ -308,9 +303,9 @@ describe("attachments", () => {
 				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(200)
-				.expect(mail.body)
 				.expect((res) => {
-					res.text.should.be.equal(mail.body);
+					res.body.should.have.property("body");
+					res.body.body.should.be.equal(mail.body);
 				})
 				.end(done);
 		});

@@ -64,7 +64,7 @@ const mailPrototypeToMimeMessage = (mail) => {
 	mail.date = (new Date()).toISOString();
 	msg.header("To", mail.to.join(", "));
 	msg.header("From", mail.from);
-	msg.header("Date", mail.date); // TODO
+	msg.header("Date", mail.date);
 	msg.header("Subject", mail.subject);
 	if (mail.body) {
 		const plainEntity = mimemessage.factory({
@@ -98,7 +98,6 @@ const onceReady = (conn) => {
 			reject(err);
 		});
 		conn.once("end", () => {
-			//console.log("IMAP end");
 		});
 		conn.connect();
 	});
@@ -252,6 +251,7 @@ const cloneMessage = (conn, uid, mail, newAtt, excludeAttachments = []) => {
 		const parts = parseMailStruct(meta[0].attrs.struct);
 		for (let a of attachmentsFromParts(parts)) {
 			if (excludeAttachments.includes(a.id)) {
+				// TODO 404 attachment
 				continue;
 			}
 			const buffer = await fetchPart(conn, uid, a.id);
@@ -355,9 +355,29 @@ const getPart = (conn, directory, uid, partid) => {
 	});
 }
 
+const getMessage = async (conn, directory, uid) => {
+	const box = await openBox(conn, directory);
+	if (box.messages.total === 0) {
+		conn.closeBox(() => {});
+		conn.end();
+		return undefined
+	}
+	return fetchMeta(conn, uid).then(async (meta) => {
+		if (!meta || meta.length === 0) {
+			return undefined
+		}
+		let mail = metaToMailPrototype(meta[0]);
+		mail.body = (await fetchPart(conn, uid, 1)).toString();
+		return mail;
+	}).finally(() => {
+		conn.closeBox(() => {});
+		conn.end();
+	});
+};
+
 const getMessages = async (conn, directory, query, offset, limit) => {
 	const box = await openBox(conn, directory);
-	if (box.messages.total == 0) {
+	if (box.messages.total === 0) {
 		conn.closeBox(() => {});
 		conn.end();
 		return [];
@@ -427,7 +447,7 @@ const deleteAttachment = async (conn, directory, uid, aid) => {
 };
 
 module.exports = {
-	getPart, getMessages, addMessage, deleteMessage,
+	getPart, getMessages, getMessage, addMessage, deleteMessage,
 	addAttachment, deleteAttachment, updateMessage
 };
 

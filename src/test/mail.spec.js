@@ -202,15 +202,14 @@ describe("mail", () => {
 				})
 				.end(done);
 		});
-		it("should get message body", (done) => {
+		it("should get message with body", (done) => {
 			request(app)
 				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(200)
-				.expect("Content-Type", /text/)
-				.expect(mail.body)
 				.expect((res) => {
-					res.text.should.be.equal(mail.body);
+					res.body.should.have.properties(["id", "from", "date", "body", "subject", "to"]);
+					res.body.body.should.be.equal(mail.body);
 				})
 				.end(done);
 		});
@@ -226,9 +225,10 @@ describe("mail", () => {
 		];
 		let token = "";
 		let groupId = 0;
+		const genMails = 19;
 		before(async (done) => {
 			[token, groupId] = await createGroup();
-			for (i = 0; i < 9; i++) {
+			for (i = 0; i < genMails; i++) {
 				mails.push({
 					subject: `mail ${i}`,
 					to: ["mail@mail.com"],
@@ -242,9 +242,7 @@ describe("mail", () => {
 					.send(mails[i])
 					.expect(201)
 					.expect((res) => {
-						res.body.should.have.property("from");
-						res.body.should.have.property("to");
-						res.body.should.have.property("subject");
+						res.body.should.have.properties(["from", "to", "subject"]);
 
 						res.body.subject.should.be.equal(mails[i].subject);
 						res.body.should.have.property("id");
@@ -253,14 +251,15 @@ describe("mail", () => {
 			}
 			done();
 		});
-		it(`should get Drafts folder with ${mails.length} messages`, (done) => {
+		it(`should get Drafts folder with 10 (limit) messages`, (done) => {
 			request(app)
 				.get(`/api/groups/${groupId}/mail/Drafts`)
 				.set({ Authorization: "Token "+token })
+				.query({ limit: 10 })
 				.expect(200)
 				.expect((res) => {
 					res.body.should.be.an.array;
-					res.body.should.have.length(mails.length);
+					res.body.should.have.length(10);
 					res.body[0].should.have.property("id");
 					res.body[0].should.have.property("attachments");
 					res.body[0].should.have.property("from");
@@ -288,15 +287,45 @@ describe("mail", () => {
 				})
 				.end(done);
 		});
-		it("should find 9 messages", (done) => {
+		it(`should find 10 (limit) messages`, (done) => {
 			request(app)
 				.get(`/api/groups/${groupId}/mail/Drafts`)
 				.set({ Authorization: "Token "+token })
-				.query({ search: "hello" })
+				.query({ limit: 10, search: "hello" })
 				.expect(200)
 				.expect((res) => {
 					res.body.should.be.an.array;
-					res.body.should.have.length(9);
+					res.body.should.have.length(10);
+				})
+				.end(done);
+		});
+		it(`should get 15 recent messages`, (done) => {
+			request(app)
+				.get(`/api/groups/${groupId}/mail/Drafts`)
+				.set({ Authorization: "Token "+token })
+				.query({ limit: 15 })
+				.expect(200)
+				.expect((res) => {
+					res.body.should.be.an.array;
+					res.body.should.have.length(15);
+					for (let i = 0; i < 15; i++) {
+						res.body[i].id.should.be.equal(mails[mails.length-1 - i].id);
+					}
+				})
+				.end(done);
+		});
+		it(`should get 15 recent messages with offset 5`, (done) => {
+			request(app)
+				.get(`/api/groups/${groupId}/mail/Drafts`)
+				.set({ Authorization: "Token "+token })
+				.query({ limit: 15, offset: 5 })
+				.expect(200)
+				.expect((res) => {
+					res.body.should.be.an.array;
+					res.body.should.have.length(15);
+					for (let i = 0; i < 15; i++) {
+						res.body[i].id.should.be.equal(mails[mails.length-1 - 5- i].id);
+					}
 				})
 				.end(done);
 		});
@@ -347,9 +376,9 @@ describe("mail", () => {
 				.get(`/api/groups/${groupId}/mail/Drafts/messages/${mailId}`)
 				.set({ Authorization: "Token "+token })
 				.expect(200)
-				.expect(newMail.body)
 				.expect((res) => {
-					res.text.should.be.equal(newMail.body);
+					res.body.should.have.property("body");
+					res.body.body.should.be.equal(newMail.body);
 				});
 			done();
 		});

@@ -33,13 +33,11 @@ const getMessages = async (req, res, next) => {
 const getMessage = async (req, res, next) => {
 	try {
 		const conn = await connect(req.group.maillocal, req.group.mailpass);
-		const mail = await model.getPart(conn, req.directory, req.messageId, 1);
+		const mail = await model.getMessage(conn, req.directory, req.messageId);
 		if (!mail) {
 			throw new HTTPError(404, "No such message");
 		}
-		res.set("Content-Type", "text/plain");
-		res.send(mail.toString());
-		res.status(200).end();
+		res.status(200).json(mail);
 	} catch (err) {
 		next(err);
 	}
