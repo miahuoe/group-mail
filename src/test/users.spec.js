@@ -59,6 +59,30 @@ describe("/api/users", () => {
 				.send(req)
 				.expect(201, done);
 		});
+		it("should 409 existing login", (done) => {
+			const req = {
+				login: login,
+				password: "hmmmmmmmmm",
+				email: email+"2@xd.com"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(409)
+				.end(done);
+		});
+		it("should 409 existing email", (done) => {
+			const req = {
+				login: login+"notduplicate",
+				password: "hmmmmmmmmm",
+				email: email+"@xd.com"
+			};
+			request(app)
+				.post("/api/users/register")
+				.send(req)
+				.expect(400)
+				.end(done);
+		});
 	});
 	describe("POST /api/users/login", () => {
 		it("should 404 on non-existing user login", (done) => {
