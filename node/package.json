@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "make": "make install",
     "test": "mocha --exit --timeout 10000 ./src/test || true",
     "start": "node ./src",
     "rollback": "knex migrate:rollback",
@@ -36,6 +37,6 @@
     "supertest": "^4.0.2"
   },
   "devDependencies": {
-    "mocha": "^2.2.5"
+    "mocha": "^2.5.3"
   }
 }

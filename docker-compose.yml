@@ -36,9 +36,10 @@ services:
         echo 'waiting for mail 143';
         sleep 2;
       done &&
-      npm run-script rollback &&
+      npm run-script make &&
       npm run-script migrate &&
       npm run-script watch"
+
       #depends_on:
       #- db
 

@@ -5,7 +5,13 @@ const app = require("../app");
 const fs = require("fs");
 const randomString = require("../lib/randomString");
 
-const files = ["doc.yaml", "knexfile.js"];
+const dir = "./src/test/";
+const files = [dir+"groups.spec.js", dir+"attachments.spec.js"];
+
+const basename = (path) => {
+	const i = path.split("/");
+	return i[i.length-1];
+};
 
 const createGroup = async () => {
 	const user = {
@@ -226,7 +232,7 @@ describe("attachments", () => {
 				.expect(200)
 				.expect("Content-Type", "application/octet-stream")
 				.expect((res) => {
-					const orig = fs.readFileSync(atts[0].name);
+					const orig = fs.readFileSync(dir+atts[0].name);
 					const sent = res.body;
 					assert(0 === Buffer.compare(orig, sent));
 				})
@@ -269,7 +275,7 @@ describe("attachments", () => {
 					res.body.attachments.should.be.an.array;
 					res.body.attachments.should.have.length(1);
 					res.body.attachments[0].should.have.property("name");
-					res.body.attachments[0].name.should.be.equal(files[0]);
+					res.body.attachments[0].name.should.be.equal(basename(files[0]));
 					mailId = res.body.id;
 					attId = res.body.attachments[0].id;
 				});

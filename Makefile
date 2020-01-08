@@ -19,9 +19,12 @@ test : build docker-test.yml
 	docker-compose -f docker-test.yml up --remove-orphans
 
 clean :
-	rm -rf docker-test.yml mail/home/* db-data/*
+	rm -rf docker-test.yml
 	docker-compose down
 	yes | docker-compose rm -v
+	$(MAKE) -C node clean
+	$(MAKE) -C mail clean
+	$(MAKE) -C db clean
 
 
 .PHONY: run debug test clean
