@@ -23,7 +23,7 @@ services:
       - "9229"
     working_dir: "/home/node/app"
     volumes:
-      - "../:/home/node/app"
+      - "./node:/home/node/app"
     command: >
       sh -c "
       while ! nc -z db 3306;
@@ -55,8 +55,8 @@ services:
     expose:
       - "3306"
     volumes:
-      - ./sqldump:/docker-entrypoint-initdb.d
-      - ./db-data:/var/lib/mysql
+      - ./db/sqldump:/docker-entrypoint-initdb.d
+      - ./db/data:/var/lib/mysql
     restart: always
 
 # vim: noai:ts=2:sw=2
