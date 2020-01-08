@@ -17,14 +17,15 @@ services:
     user: node
     ports:
       - "3003:3003"
+      - "9229:9229"
     expose:
       - "3003"
+      - "9229"
     working_dir: "/home/node/app"
     volumes:
       - "../:/home/node/app"
     command: >
       sh -c "
-      rm -rf node_modules && npm install;
       while ! nc -z db 3306;
       do
         echo 'waiting for db 3306';
