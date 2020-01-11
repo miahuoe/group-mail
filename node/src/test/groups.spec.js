@@ -305,11 +305,11 @@ describe("groups", () => {
 					.expect(400)
 					.end(done);
 			});
-			it("should 401 when called by a normal member", (done) => {
+			it("should 403 when called by a normal member", (done) => {
 				request(app)
 					.del(`/api/groups/${group.id}/users/1`)
 					.set({ Authorization: "Token "+users[1].token })
-					.expect(401)
+					.expect(403)
 					.end(done);
 			});
 			it("should 400 on non-member", (done) => {
@@ -317,6 +317,13 @@ describe("groups", () => {
 					.del(`/api/groups/${group.id}/users/${users[numUsers-1].id}`)
 					.set({ Authorization: "Token "+users[0].token })
 					.expect(400)
+					.end(done);
+			});
+			it("should 404 on non-existing group", (done) => {
+				request(app)
+					.del(`/api/groups/999999999/users/999999999`)
+					.set({ Authorization: "Token "+users[0].token })
+					.expect(404)
 					.end(done);
 			});
 			it("should 404 on non-existing user", (done) => {
