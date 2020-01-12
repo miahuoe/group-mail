@@ -26,22 +26,33 @@ services:
       - "./node:/home/node/app"
     command: >
       sh -c "
-      while ! nc -z db 3306;
-      do
-        echo 'waiting for db 3306';
-        sleep 2;
-      done &&
-      while ! nc -z mail 143;
-      do
-        echo 'waiting for mail 143';
-        sleep 2;
-      done &&
+      ./wait.sh db 3306 &&
+      ./wait.sh mail 143 &&
       npm run-script make &&
       npm run-script migrate &&
       npm run-script watch"
 
-      #depends_on:
-      #- db
+  node-test:
+    build: ./node
+    user: node
+    #environment:
+    #  - NODE_ENV=test
+    ports:
+      - "3003:3003"
+      - "9229:9229"
+    expose:
+      - "3003"
+      - "9229"
+    working_dir: "/home/node/app"
+    volumes:
+      - "./node:/home/node/app"
+    command: >
+      sh -c "
+      ./wait.sh db 3306 &&
+      ./wait.sh mail 143 &&
+      npm run-script make &&
+      npm run-script migrate &&
+      while true; do npm run-script test; sleep 12; done"
 
   db:
     image: mysql
