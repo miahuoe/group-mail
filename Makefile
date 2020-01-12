@@ -11,12 +11,8 @@ debug : build
 	cd ..
 	npm run watch # TODO
 
-docker-test.yml : docker-compose.yml
-	sed 's/npm\ run-script\ watch/while\ true;do\ npm\ run-script\ test;\ sleep\ 12;\ done/g' $^ > $@
-
-
-test : build docker-test.yml
-	docker-compose -f docker-test.yml up --remove-orphans
+test : build
+	docker-compose -f docker-compose.yml up --remove-orphans db mail node-test
 
 clean :
 	rm -rf docker-test.yml
