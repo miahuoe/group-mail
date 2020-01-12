@@ -1,3 +1,6 @@
+"use strict";
+/* jshint esversion: 8, node: true, unused: true */
+
 const { limits } = require("../src/config");
 const tableName = "users";
 
@@ -8,6 +11,7 @@ exports.up = function(knex) {
 		table.string("email").notNull();
 		table.string("password").notNull();
 		table.datetime("joined").notNull().defaultTo(knex.fn.now());
+		// TODO sqlite does not have defaults
 
 		table.unique(["login"]);
 		table.unique(["email"]);
