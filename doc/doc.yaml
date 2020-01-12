@@ -65,6 +65,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Group'
+        400:
+          description: 'Name/mail invalid'
         401:
           description: 'Unauthorized'
         409:
@@ -88,6 +90,8 @@ paths:
       responses:
         200:
           description: 'Left group'
+        400:
+          description: 'Admin cannot leave group'
         403:
           description: 'Not in group'
         404:
@@ -146,6 +150,8 @@ paths:
                 type: array
                 item:
                   $ref: '#/components/schemas/Mail'
+        400:
+          description: 'Invalid parameter(s)'
         401:
           description: 'Unauthorized'
         404:
@@ -170,7 +176,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Mail'
         400:
-          description: 'Cannot create mail there'
+          description: 'Cannot create mail there/Invalid parameter(s)'
         401:
           description: 'Unauthorized'
         404:
@@ -213,6 +219,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Mail'
+        #TODO only drafts goes 400
         401:
           description: 'Unauthorized'
         403:
@@ -439,10 +446,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        400:
+          description: 'Missing parameters or are invalid'
         401:
           description: 'Unauthorized'
-        403:
-          description: 'Cannot post'
         404:
           description: 'No such group'
 
@@ -494,6 +501,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Comment'
+        400:
+          description: 'Invalid parameter(s)'
         401:
           description: 'Unauthorized'
         404:
@@ -517,6 +526,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
+        400:
+          description: 'Invalid comment or missing fields'
         401:
           description: 'Unauthorized'
         403:
@@ -568,10 +579,14 @@ paths:
       responses:
         201:
           description: 'Invitation sent'
+        400:
+          description: 'Missing query parameter'
         401:
           description: 'Unauthorized'
         403:
           description: 'Cannot invite users'
+          #404:
+          #  description: 'No such user'
 
 
   '/groups/{groupId}/users/{userLogin}':
@@ -596,10 +611,12 @@ paths:
       responses:
         204:
           description: 'Kicked'
+        400:
+          description: 'Cannot kick a non-member/Invalid parameters'
         401:
           description: 'Unauthorized'
         403:
-          description: 'Cannot kick users'
+          description: 'Only admin can kick'
         404:
           description: 'No such group/user'
         409:
