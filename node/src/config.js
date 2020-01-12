@@ -1,6 +1,7 @@
 "use strict";
+/* jshint esversion: 8, node: true, unused: true */
 
-const config = {
+let config = {
 	node: {
 		env: process.env.NODE_ENV || "development",
 		port: 3003,
@@ -25,12 +26,6 @@ const config = {
 		host: "mail",
 		port: "143",
 		tls: false
-		//host: "imap.gmail.com",
-		//port: 993,
-		//tls: true,
-		//tlsOptions: {
-		//	servername: "imap.gmail.com"
-		//},
 	},
 	limits: {
 		login: {
@@ -43,6 +38,13 @@ const config = {
 		}
 	}
 };
+
+if (config.node.env === "test") {
+	config.databaseClient = "sqlite3";
+	config.databaseConnection = {
+		filename: ":memory:",
+	};
+}
 
 module.exports = config;
 
