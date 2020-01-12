@@ -1,3 +1,6 @@
+"use strict";
+/* jshint esversion: 8, mocha: true, node: true, unused: true, expr: true */
+
 const should = require("should");
 const assert = require("assert");
 const request = require("supertest");
@@ -228,14 +231,14 @@ describe("mail", () => {
 		const genMails = 19;
 		before(async (done) => {
 			[token, groupId] = await createGroup();
-			for (i = 0; i < genMails; i++) {
+			for (let i = 0; i < genMails; i++) {
 				mails.push({
 					subject: `mail ${i}`,
 					to: ["mail@mail.com"],
 					body: "hello imap",
 				});
 			}
-			for (i = 0; i < mails.length; i++) {
+			for (let i = 0; i < mails.length; i++) {
 				await request(app)
 					.post(`/api/groups/${groupId}/mail/Drafts`)
 					.set({ Authorization: "Token "+token })
@@ -368,7 +371,7 @@ describe("mail", () => {
 					res.body.subject.should.be.equal(newMail.subject);
 					res.body.should.have.property("id");
 					mailId = res.body.id;
-				})
+				});
 			done();
 		});
 		it("should have updated body", async (done) => {
