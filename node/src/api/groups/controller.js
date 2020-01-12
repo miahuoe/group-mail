@@ -1,4 +1,5 @@
 "use strict";
+/* jshint node: true, esversion: 8, unused: true */
 
 const Group = require("./model");
 const User = require("../users/model");
@@ -32,20 +33,20 @@ const create = async (req, res, next) => {
 		};
 		// TODO transaction?
 		const g = await Group.query().insert(newGroup);
-		const r = await g.$relatedQuery("users").relate(req.user.id);
+		await g.$relatedQuery("users").relate(req.user.id);
 		delete g.adminId;
 		delete g.mailpass;
 		delete g.mailpassmd5;
 		res.status(201).json(g);
 	} catch (err) {
 		if (err.code == "ER_DUP_ENTRY") {
-			let message = ""
+			let message = "";
 			if (err.sqlMessage.indexOf("maillocal") != -1) {
-				message = "Mail occupied"
+				message = "Mail occupied";
 			} else if (err.sqlMessage.indexOf("name") != -1) {
-				message = "Name occupied"
+				message = "Name occupied";
 			}
-			res.status(409).json({message});
+			next(new HTTPError(409, message));
 		} else {
 			next(err);
 		}
@@ -86,7 +87,7 @@ const invite = async (req, res, next) => {
 		if (!u) {
 			throw new HTTPError(404, "No such user");
 		}
-		const r = await req.group.$relatedQuery("users").relate(u.id);
+		await req.group.$relatedQuery("users").relate(u.id);
 		res.status(201).json({message: "Invited"});
 	} catch (err) {
 		if (err.code && err.code === "ER_DUP_ENTRY") {
@@ -99,14 +100,10 @@ const invite = async (req, res, next) => {
 
 const leave = async (req, res, next) => {
 	try {
-		if (v.error) {
-			throw new HTTPError(400, v.error.details[0].message);
-		}
-		v = v.value;
 		if (req.group.adminId == req.user.id) {
 			throw new HTTPError(400, "Group admin cannot leave group");
 		}
-		const r = await req.group.$relatedQuery("users")
+		await req.group.$relatedQuery("users")
 			.unrelate().where("id", req.user.id);
 		res.status(204).json({message: "Left"});
 	} catch (err) {
@@ -127,7 +124,7 @@ const kick = async (req, res, next) => {
 		}
 		v = v.value;
 		if (req.group.adminId != req.user.id) {
-			throw new HTTPError(401, "Only group admin can kick");
+			throw new HTTPError(403, "Only group admin can kick");
 		}
 		if (req.group.adminId == v.userId) {
 			throw new HTTPError(400, "Group admin cannot be kicked out of group");
@@ -141,7 +138,7 @@ const kick = async (req, res, next) => {
 		if (!m || m.length == 0) {
 			throw new HTTPError(400, "Not a member");
 		}
-		const r = await req.group.$relatedQuery("users")
+		await req.group.$relatedQuery("users")
 			.unrelate().where("id", v.userId);
 		res.status(204).json({message: "Kicked"});
 	} catch (err) {
